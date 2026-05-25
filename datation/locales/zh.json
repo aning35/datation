@@ -1,0 +1,108 @@
+{
+  "trace": {
+    "missionPlan": "任务规划",
+    "codes": {
+      "ROUTING_DECISION": "任务路由决策",
+      "PLANNING_COMPLETED": "任务规划完成",
+      "EXECUTE_STEP": "执行步骤",
+      "EXECUTE_STEP_WITH_NAME": "执行: {{taskName}}",
+      "REVIEW_COMPLETED_GENERATE": "审查完成 → 生成最终报告",
+      "REVIEW_COMPLETED_GENERATE_DESC": "已完成 {{done}} 个步骤，分析结束，正在生成汇总报告...",
+      "REVIEW_COMPLETED_CONTINUE": "审查完成 → 继续执行",
+      "REVIEW_COMPLETED_CONTINUE_DESC": "已完成评估，即将开始第 {{remaining}} 步，下一步将执行：{{nextTask}}",
+      "REQUIREMENTS_COMPLETED": "需求结构化完成",
+      "REPORT_GENERATED": "分析报告已生成",
+      "QA_COMPLETED": "QA 解答完成",
+      "DATA_ANALYSIS_ENDED": "数据分析环节结束",
+      "HISTORY_RESTORED": "历史记录恢复",
+      "FEEDBACK_RESTORED": "反馈记录恢复",
+      "HISTORY_DIALOG_STATE": "历史对话状态",
+      "LOADED_RECORD": "已加载记录 #{{count}}",
+      "EMPTY_AI_RESPONSE": "已读取完毕，但没有发现有效的 AI 回复内容。",
+      "COMPLETED_TEXT": "完成",
+      "WAITING_REPLY": "等待您的回复",
+      "USER_INPUT": "用户输入",
+      "PENDING": "（待定）",
+      "ROUTE_TO_DataAnalyst": "路由至 DataAnalyst — 直接执行数据分析",
+      "ROUTE_TO_RequirementsAnalyst": "路由至 RequirementsAnalyst — 结构化需求分析",
+      "ROUTE_TO_ReportGenerator": "路由至 ReportGenerator — 整合数据生成最终报告",
+      "ROUTE_TO_QAAgent": "路由至 QAAgent — 对生成数据与报告进行深度解答",
+      "ROUTE_TO_SkillExecutor": "路由至 SkillExecutor — 直接执行 Skill SOP 任务",
+      "ROUTE_TO_FINISH": "直接回复用户，无需调用子智能体",
+      "RUNNING_planner": "正在规划子任务...",
+      "RUNNING_executor": "正在处理子任务或等待执行结果...",
+      "RUNNING_reviewer": "正在审查执行结果...",
+      "RUNNING_Supervisor": "正在进行任务路由分配...",
+      "RUNNING": "执行中...",
+      "RUNNING_RequirementsAnalyst": "正在进行需求分析与确认...",
+      "RUNNING_ReportGenerator": "正在生成最终分析报告...",
+      "RUNNING_DataAnalyst": "正在执行数据分析相关逻辑...",
+      "RUNNING_QAAgent": "正在提取已有文件并进行解答...",
+      "RUNNING_SkillExecutor": "正在执行 Skill SOP 任务...",
+      "COLLECT_FILES_DESC": "已收集 {{count}} 个产出文件",
+      "OUTLINE_COMPLETED": "报告大纲已生成",
+      "CHAPTER_COMPLETED": "已完成章节: {{title}}",
+      "REPORT_MERGED": "报告已合并 ({{count}} 字符)",
+      "HTML_GENERATED": "HTML 报告已生成",
+      "COLLECT_FILES": "收集产出文件",
+      "GENERATE_OUTLINE": "生成报告大纲",
+      "GENERATE_CHAPTER": "撰写报告章节",
+      "MERGE_REPORT": "合并报告",
+      "CONVERT_HTML": "转换为 HTML"
+    }
+  },
+  "logs": {
+    "codes": {
+      "LLM_START": "LLM 调用开始: {{name}}",
+      "LLM_STREAM": "LLM 正在输出...",
+      "LLM_END": "LLM 响应完成: {{name}} | tokens: in={{in}} out={{out}}",
+      "TOOL_START": "工具调用: {{name}}",
+      "TOOL_END": "工具返回: {{name}}"
+    }
+  },
+  "supervisor": {
+    "clarification": {
+      "title": "🔍 **需求分析师访谈**\n\n{{question}}\n\n_请回答以上问题，我将根据您的回答进一步确认分析方案。_",
+      "user_reply": "(用户提供反馈)"
+    },
+    "approval": {
+      "title": "✅ **初步需求分析方案已生成**\n\n{{brief}}\n\n_请回复「确认」开始执行分析。_\n_如果您有任何需要补充或修改的地方，请在此告诉我，我会为您调整方案。_",
+      "action": "等待用户对分析方案的确认或补充",
+      "user_reply": "(用户已确认，请继续执行)"
+    }
+  },
+  "report": {
+    "title": "📊 数据分析报告",
+    "failed": "报告生成失败",
+    "no_chapters": "无章节内容",
+    "html_lang": "zh-CN",
+    "footer": {
+      "generated_by": "📊 本报告由 Datation AI 数据分析平台自动生成",
+      "generated_at": "生成时间：{{time}}"
+    },
+    "default_outline": {
+      "executive_summary": {
+        "title": "执行摘要",
+        "description": "核心发现概述",
+        "key_metrics": "关键指标",
+        "main_trends": "主要趋势"
+      },
+      "data_analysis": {
+        "title": "数据分析",
+        "description": "详细数据分析",
+        "data_overview": "数据概览",
+        "deep_analysis": "深度分析"
+      },
+      "conclusions": {
+        "title": "结论建议",
+        "description": "结论与建议",
+        "core_findings": "核心结论",
+        "action_items": "行动建议"
+      }
+    },
+    "duplicate_avoidance": {
+      "chapter_prefix": "  第{{index}}章「{{title}}」: {{preview}}...",
+      "instruction": "\n【重要：避免重复】\n以下是已完成章节的内容摘要。你**必须**确保当前章节的内容与它们不重复：\n{{previous_chapters_summary}}\n\n请写出与上述章节互补的、全新的内容。不要重复已经出现过的数据结论、趋势描述或建议。\n"
+    }
+  }
+}

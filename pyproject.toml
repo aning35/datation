@@ -1,0 +1,38 @@
+[project]
+name = "datation"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiofiles>=25.1.0",
+    "docling>=2.86.0",
+    "duckduckgo-search>=8.1.1",
+    "faiss-cpu>=1.13.2",
+    "fastapi>=0.129.0",
+    "langchain>=1.2.10",
+    "langchain-community>=0.4.1",
+    "langchain-core>=1.2.14",
+    "langchain-experimental>=0.4.1",
+    "langchain-litellm>=0.5.1",
+    "langchain-openai>=1.1.10",
+    "langgraph>=1.0.9",
+    "langgraph-checkpoint-postgres>=3.0.4",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+    "litellm>=1.81.13",
+    "markitdown>=0.0.1a2",
+    "matplotlib>=3.10.8",
+    "mcp==1.2.1",
+    "openpyxl>=3.1.0",
+    "pandas>=3.0.1",
+    "psycopg2-binary>=2.9.11",
+    "pymupdf>=1.24.0",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.22",
+    "pyyaml>=6.0.3",
+    "tiktoken>=0.12.0",
+    "uvicorn>=0.41.0",
+]
+
+[tool.uv.workspace]
+members = ["workspaces/*"]
