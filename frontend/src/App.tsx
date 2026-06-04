@@ -62,6 +62,9 @@ const App: React.FC = () => {
   const logBottomRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastOuterNodeRef = useRef<string | null>(null);
+  // Batch-flush pending log entries to avoid per-token setState calls during LLM streaming
+  const pendingLogsRef = useRef<LogEntry[]>([]);
+  const flushLogsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [backendReady, setBackendReady] = useState(false);
 
   // Poll backend /health until ready=true
@@ -311,9 +314,8 @@ const App: React.FC = () => {
     }
   }, [isProcessing]);
 
-  useEffect(() => {
-    logBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [logs]);
+  // NOTE: Removed per-log scrollIntoView — LogPanel uses Virtuoso followOutput="smooth" internally.
+  // Calling scrollIntoView on every log entry caused layout thrashing during high-frequency LLM streaming.
 
   const isFirstRender = useRef(true);
   const initDoneRef = useRef(false);
@@ -559,19 +561,35 @@ const App: React.FC = () => {
                   ));
                 }
               } else if (parsed.type === 'log') {
-                setLogs(prev => {
-                  if (prev.length > 0) {
-                    const last = prev[prev.length - 1];
-                    if (last.level === 'llm_stream' && parsed.level === 'llm_stream' && last.node === parsed.node) {
-                      const updatedLast = {
-                        ...last,
-                        detail: String(last.detail || '') + String(parsed.detail || '')
-                      };
-                      return [...prev.slice(0, -1), updatedLast];
-                    }
-                  }
-                  return [...prev, parsed as LogEntry];
-                });
+                // Throttle: accumulate log entries and flush at most every 80ms to avoid
+                // per-token setState calls which would freeze the page during LLM streaming.
+                pendingLogsRef.current.push(parsed as LogEntry);
+                if (!flushLogsTimerRef.current) {
+                  flushLogsTimerRef.current = setTimeout(() => {
+                    flushLogsTimerRef.current = null;
+                    const batch = pendingLogsRef.current.splice(0);
+                    if (batch.length === 0) return;
+                    setLogs(prev => {
+                      const result = [...prev];
+                      for (const log of batch) {
+                        if (result.length > 0) {
+                          const last = result[result.length - 1];
+                          if (last.level === 'llm_stream' && log.level === 'llm_stream' && last.node === log.node) {
+                            // Merge consecutive llm_stream tokens into one entry, cap at 50 KB
+                            const combined = String(last.detail || '') + String(log.detail || '');
+                            result[result.length - 1] = {
+                              ...last,
+                              detail: combined.length > 50000 ? combined.slice(-50000) : combined,
+                            };
+                            continue;
+                          }
+                        }
+                        result.push(log);
+                      }
+                      return result;
+                    });
+                  }, 80);
+                }
                 if (parsed.node) {
                   let mappedNode = parsed.node;
                   // If it's a sub-node (silent or not), try to prefix it with the last known outer node
@@ -700,6 +718,32 @@ const App: React.FC = () => {
       }
     } finally {
       abortControllerRef.current = null;
+      // Flush any log entries that are still waiting in the throttle buffer
+      if (flushLogsTimerRef.current) {
+        clearTimeout(flushLogsTimerRef.current);
+        flushLogsTimerRef.current = null;
+      }
+      const remainingLogs = pendingLogsRef.current.splice(0);
+      if (remainingLogs.length > 0) {
+        setLogs(prev => {
+          const result = [...prev];
+          for (const log of remainingLogs) {
+            if (result.length > 0) {
+              const last = result[result.length - 1];
+              if (last.level === 'llm_stream' && log.level === 'llm_stream' && last.node === log.node) {
+                const combined = String(last.detail || '') + String(log.detail || '');
+                result[result.length - 1] = {
+                  ...last,
+                  detail: combined.length > 50000 ? combined.slice(-50000) : combined,
+                };
+                continue;
+              }
+            }
+            result.push(log);
+          }
+          return result;
+        });
+      }
       setIsProcessing(false);
       // Refresh sidebar history
       fetchHistoryData();

@@ -1187,19 +1187,36 @@ async def rollback_conversation(request: RollbackRequest):
         messages_to_remove = messages[cut_index:]
         remove_ops = [RemoveMessage(id=msg.id) for msg in messages_to_remove if hasattr(msg, 'id') and msg.id]
 
+        # Always reset state — even if no messages to remove, stale fields like
+        # last_completed_node='ReportGenerator' must be cleared so the Supervisor
+        # doesn't skip DataAnalyst on the next run.
+        reset_state = {
+            "last_completed_node": "",
+            "analysis_result": None,
+            "requirements_brief": None,
+            "in_requirements_clarification": False,
+            "awaiting_confirmation_from": None,
+        }
         if remove_ops:
-            await state.agent_app.aupdate_state(
-                config,
-                {
-                    "messages": remove_ops,
-                    "last_completed_node": "",
-                    "analysis_result": None,
-                    "requirements_brief": None,
-                    "in_requirements_clarification": False,
-                    "awaiting_confirmation_from": None,
-                },
-            )
-            print(f"[Rollback] Removed {len(remove_ops)} messages from thread {thread_id}, reset supervisor state")
+            reset_state["messages"] = remove_ops
+        await state.agent_app.aupdate_state(config, reset_state)
+        print(f"[Rollback] Reset supervisor state for thread {thread_id} (removed {len(remove_ops)} messages)")
+
+        # 3b. For PostgreSQL backends: directly wipe ALL checkpoint rows for this thread
+        #     so that stale channel_values (last_completed_node, analysis_result) cannot
+        #     be replayed via the checkpoint blob chain.  This is the only reliable way
+        #     to guarantee a clean slate after rollback.
+        if SAVER_TYPE == "postgres" and state.postgres_pool:
+            try:
+                async with state.postgres_pool.connection() as pg_conn:
+                    async with pg_conn.cursor() as cur:
+                        await cur.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))
+                        await cur.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id,))
+                        await cur.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
+                        await pg_conn.commit()
+                        print(f"[Rollback] Wiped PostgreSQL checkpoint rows for thread {thread_id}")
+            except Exception as _pg_err:
+                print(f"[Rollback] Warning: Failed to wipe PostgreSQL checkpoints: {_pg_err}")
 
         # 4. Truncate workspace files
         workspace_dir = os.path.join(
@@ -1268,12 +1285,12 @@ async def rollback_conversation(request: RollbackRequest):
             except Exception as e:
                 print(f"[Rollback] ⚠️ Failed to truncate stream_logs: {e}")
 
-        # 4c. Clean plan_state.json if rolling back to the very beginning
+        # 4c. Reset plan_state.json
         plan_state_file = os.path.join(workspace_dir, "plan_state.json")
-        if request.user_message_index == 0 and os.path.exists(plan_state_file):
+        if os.path.exists(plan_state_file):
             try:
                 os.remove(plan_state_file)
-                print(f"[Rollback] Removed plan_state.json (full rollback)")
+                print(f"[Rollback] Removed plan_state.json")
             except Exception as e:
                 print(f"[Rollback] ⚠️ Failed to remove plan_state.json: {e}")
 
