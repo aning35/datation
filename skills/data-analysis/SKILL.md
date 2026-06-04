@@ -1,20 +1,94 @@
 ---
 name: data-analysis
-description: "提供标准化、深度的业务数据洞察分析SOP体系。当用户提出需要从数据中寻找原因或总结规律(如'为何流失率较高')时，智能体必须严格遵从此流程去指挥执行层抽取、清洗并推理结论。"
+description: "提供标准化、专业的数据分析与洞察挖掘SOP体系。涵盖描述性分析（现状与趋势）与诊断性分析（拆解与归因）。用于回答'发生了什么'、'哪里发生'、'分布与异动如何'。必须严格遵循质量检验、多维交叉、假设检验的流程，避免均值谬误与虚假相关。"
 ---
-# Data Analysis Standard Operating Procedure (SOP)
+# 专业数据分析与洞察挖掘标准作业程序 (Data Analysis & Insights SOP)
 
-This skill dictates how the Autonomous Agent should conduct deep data analysis and root cause inference.
+本技能旨在规范智能体如何对结构化与非结构化数据进行系统的**描述性与诊断性分析**。其核心理念是：确保数据质量、穿透总体平均值的谬误、通过多维交叉与细分下钻发现局部规律，并最终输出可落地的业务洞察。
 
-## Workflow
-When tasked with a data analysis objective, you MUST follow this sequence:
-1. **Understand & Translate**: Define the core business metric in question (e.g. churn rate, order volume).
-2. **Context Gathering (Extraction)**: Use `PostgreSQL_MCP_Query` to fetch the macro trends. If necessary, use `LocalFileReader` to read supplemental configuration or logs to form a complete context.
-3. **Deep Dive & Clean**: Use the `DataComputationSandbox` to perform calculations, aggregations, and correlations. Ensure your calculations are verifiable and logically sound.
-4. **Identify Root Causes**: Do not just present data. Cross-reference internal metrics (e.g. user engagement drops) with external proxy factors. 
-5. **Formulate Evidence Chain**: Summarize your insights mapped directly to the extracted facts.
+> **边界与防越界声明 (Scope & Boundaries)**：
+> - **本阶段负责**：“发生了什么 (What)”、“特征与分布 (How)”、“表层统计关联 (Correlation)”、“维度拆解贡献度 (Contribution)”。
+> - **移交阶段**：如果任务的核心诉求是“底层机制是什么 (Why)”、反事实推断（“如果没做会怎样”）、或者需要严格剥离混杂因子，必须在此 SOP 产出事实概貌后，**中止分析并显式触发衔接 `deep-causal-analysis` 技能**。不要在当前 SOP 下做深层因果断言。
 
-## Guidelines
-- **Always verify assumptions**: No "Hallucinations". If data is empty or missing, explicitly declare that step failed and report back to Planner for recovery.
-- **Provide Actionable Insights**: Ensure your final report gives concise, step-by-step remediation plans based on the numbers discovered.
-- **Fail Gracefully**: If a specific column does not exist, use Self-Correction mechanism to issue another schema fetch command rather than giving up completely.
+---
+
+## 任务分级与流程适配 (Analysis Tiering)
+
+在开始前，根据用户请求的复杂度，确定执行的深度（并非所有任务都需要完整走完 5 步）：
+- **Tier 1 (取数与描述)**：仅需要看某个指标的现状或趋势（如“拉一下上个月的 DAU”）。执行步骤 1 -> 2 -> 3(部分) -> 5。
+- **Tier 2 (异动排查与诊断)**：指标发生波动，需要找出是哪个维度/环节造成的（如“为什么上周转化率跌了”）。执行步骤 1 -> 2 -> 3 -> 4 -> 5。
+- **Tier 3 (探索性挖掘)**：开放性问题（如“帮我看看这批流失用户有什么特征”）。**完整执行 1-5 步，且需要多次迭代**。
+
+---
+
+## 核心工作流 (Iterative Workflow)
+
+*注意：此流程是敏捷且可迭代的。如果在步骤 3 或 4 中发现数据维度不足或异常，必须果断回退到步骤 1 重新定义范围或到步骤 2 补充数据。*
+
+### 1. 需求澄清与指标对齐 (Problem Definition)
+- **明确业务口径**：准确定义核心指标（如：活跃用户的时限标准、GMV的统计口径包含退款与否）。
+- **设定基准 (Benchmarking)**：确认对比基准，是同比 (YoY)、环比 (MoM) 还是业务大盘均值？
+- **界定分析范围**：确定时间窗口 (Timeframe)、目标群体 (Segment) 和空间维度 (Geography/Platform)。
+
+### 2. 数据获取与质量校验 (Data Extraction & Quality)
+*🚨 核心原则：Garbage In, Garbage Out。未经质量校验的数据不可进入分析环节。*
+- **获取与抽样**：如果是海量数据，必须采用**分层抽样 (Stratified Sampling)** 以保证子群体的代表性，不可仅取头部数据。对于日志/文本等非结构化数据，先进行词频或主题特征化。
+- **质量探查 (Data Profiling)**：
+  - **缺失值 (Missing)**：评估缺失机制（随机缺失还是系统性缺失），决定剔除或插值。
+  - **异常值 (Outliers)**：识别极值，判断是脏数据（需清洗）还是真实存在的长尾特征（需单独分析）。
+  - **一致性验证**：例如订单完成时间不得早于下单时间。
+- **阻断机制**：数据严重失真或关键字段缺失率>30% 时，必须中止分析，向用户报错并提供修复建议。
+
+### 3. 探索性数据分析 (Exploratory Data Analysis - EDA)
+- **全局分布 (Macro Distribution)**：
+  - 计算集中趋势（均值、中位数）与离散程度（标准差、分位数）。
+  - **强制要求**：不可只报告均值，必须查看中位数与分布形态（如偏态、长尾分布）。
+- **时间序列形态 (Time Series)**：
+  - 拆解时间序列，剥离**季节性/周期性**与**长期趋势**。警惕“周末效应”或“节假日效应”。
+- **细分与交叉下钻 (Segmentation)**：
+  - 按特征维度（渠道、版本、新老用户、地域）进行切块对比。寻找差异最大的子群体（异质性）。
+
+### 4. 诊断性分析与指标拆解 (Diagnostic Analysis)
+*(当触发条件为“指标异动”或“寻找关联”时进入此步骤)*
+- **多维贡献度拆解 (Contribution Analysis)**：
+  - 采用**杜邦分析/指标树公式拆解**（如：收入 = 流量 × 转化率 × 客单价）。
+  - 计算各维度的**绝对贡献度**。例如：“整体转化率下降2%，其中A渠道贡献了1.5%的降幅，是核心拖累项”。
+- **相关性与统计检验 (Correlation & Statistical Significance)**：
+  - 计算变量间相关系数。
+  - 🚨 **统计显著性卡点**：所有“组间差异”或“相关性”结论，必须经过统计检验（如 T检验、卡方检验、ANOVA）。如果 $p > 0.05$ 或样本量极小，必须声明“差异在统计上不显著”，不可盲目下业务结论。
+- **同期群分析 (Cohort Analysis)**：针对留存、LTV，必须按注册时间或核心行为分组进行 Cohort 对比。
+
+### 5. 洞察提炼与报告生成 (Insights & Actionability)
+- **论证透明性**：在报告中简要说明选择了什么分析方法（如 K-Means 聚类、Pearson相关）及其原因。
+- **业务翻译**：将统计术语翻译为业务语言（不写“A组均值显著大于B组”，写“A策略使得人均产出提升了20%，具备全面推广价值”）。
+- **可执行建议**：提供具体的业务落地方向或干预建议。
+
+---
+
+## 报告输出标准模板 (Standard Report Template)
+
+1. **执行摘要 (Executive Summary)**：3句话总结核心发现及干预建议。
+2. **分析背景与方法 (Context & Methodology)**：分析目标、核心指标口径、以及采用的主要分析方法。
+3. **数据质量与采样说明 (Data Quality & Sampling)**：样本量大小、缺失率、异常值处理方式，以及代表性声明。
+4. **关键洞察分解 (Key Insights)**：
+   - 洞察 1：[结论性标题] + [数据支撑图表/表格] + [业务解读与统计显著性说明]。
+   - 洞察 2：[指标波动拆解，明确各维度贡献度]。
+   - *(要求：多使用同比/环比表格，直观呈现差异)*
+5. **局限性声明 (Limitations & Risks)**：说明数据的盲区、未考虑的潜在变量。
+6. **下一步建议 (Next Steps / Call to Action)**：
+   - 短期/长期的业务动作。
+   - **分流提示**：明确指出“是否需要将本报告的核心发现作为先验假设，输入给 `deep-causal-analysis` 进行深度的机制归因”。
+
+---
+
+## 数据分析高发陷阱防御清单 (Defense Checklist)
+
+| 陷阱/谬误 | 表现形式 | 防御/正确做法 |
+| :--- | :--- | :--- |
+| **平均数谬误** | “人均收入增加”，实则是头部极少数人收入暴增。 | 强制报告**中位数**及分位数，观察数据分布形态。 |
+| **选择偏差/幸存者偏差** | 仅通过分析“活跃用户”的共性来制定拉新策略。 | 必须引入“流失用户”或“未激活用户”作为对照组进行差异比较。 |
+| **比例/绝对值混淆** | 宣称某小众渠道增长率达 200%，而绝对增量仅为 10 人。 | 分析比率/增速时，**必须强制附带绝对基数**。 |
+| **时间粒度陷阱** | 看日级数据波动剧烈得出结论，而周/月级数据其实非常平稳。 | 根据业务周期（如周循环），选择合适的聚合时间粒度。 |
+| **多重比较/数据窥探** | 对100个不同维度进行拆解，发现某一个维度刚好显著，就报告这是重大发现。 | 警惕 P-hacking，切片越多，出现假阳性的概率越大；需结合业务常识交叉验证。 |
+| **虚假相关性** | 发现“冰淇淋销量”与“溺水人数”高度相关。 | 明确声明相关不等于因果；识别并剔除受季节/时间序列驱动的自然共变。 |
+| **基线忽略** | 大促期间销量上涨，直接归功于运营活动。 | 引入历史同期的**自然增长基准线 (Baseline)** 进行剥离。 |
