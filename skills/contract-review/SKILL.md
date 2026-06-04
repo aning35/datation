@@ -1,53 +1,684 @@
 ---
 name: contract-review
-description: "提供标准化的合同与文档审查 SOP。当用户上传合同、协议或其他法律文件，要求审查风险、漏洞、合规性或提供修改建议时，必须严格遵从此流程读取并执行审查。"
+description: "提供标准化、证据驱动的合同与法律文件审查 SOP。当用户上传合同、协议、订单、补充协议、NDA、服务协议、采购合同、租赁合同、劳动/顾问协议、SaaS/软件协议、授权协议或其他法律文件，并要求识别风险、漏洞、合规问题、权责不平衡、修改建议或谈判策略时，必须严格遵循本流程执行。"
 ---
 # Contract Review Standard Operating Procedure (SOP)
+# 合同审查标准作业程序
 
-This skill dictates how the Autonomous Agent should conduct deep contract reviews, identify risks, and suggest modifications.
+本技能用于对合同、协议及相关法律文件进行系统化审查，目标是帮助用户识别合同风险、条款漏洞、商业不利点、执行障碍、缺失条款与谈判重点，并提供可操作的修改建议。
 
-## Workflow
-When tasked with reviewing a contract or legal document, you MUST follow this sequence:
+本技能输出仅用于信息参考、业务决策辅助和合同审查准备，不构成正式法律意见。对于重大交易、高金额合同、跨境合同、劳动用工、金融证券、股权投资、数据合规、知识产权归属或争议解决等高风险事项，应建议用户交由持牌律师复核。
 
-1. **Understand & Translate**: 
-   - Identify the contract type (e.g., employment, NDA, service, lease).
-   - Identify the user's role (e.g., employee, contractor, buyer, seller).
-   - Determine the jurisdiction (if specified) and any specific concerns raised by the user.
+---
 
-2. **Context Gathering (Extraction)**: 
-   - Use `LocalFileReader` to read the entire text of the provided contract document. If it is a PDF or Word document, the reader will automatically convert it to Markdown for you.
-   
-3. **Deep Dive & Clean (Risk Analysis)**:
-   Review the contract against the following standard risk profiles. Pay close attention to red flags and missing elements.
+## 1. Trigger Conditions / 触发条件
 
-   ### 🔴 High Risk (Red Flags)
-   - **Unlimited Liability**: Look for "unlimited liability", "full indemnification", or no liability cap.
-   - **Broad IP Assignment**: Look for "all intellectual property", "work product", "inventions" belonging to the company without carve-outs for pre-existing or personal time IP.
-   - **Unilateral Termination**: Look for "at will", "unilateral termination", "sole discretion" favoring only one party.
-   - **One-Sided Indemnification**: Look for obligations where only the user indemnifies the other party.
-   - **Broad Rights Waiver**: Look for "waive all claims", "forever discharge".
-   - **Missing Data Protection**: Absence of data protection/privacy clauses (GDPR/CCPA) where personal data is involved.
+当用户提出以下任一需求时，启用本技能：
 
-   ### 🟡 Medium Risk (Yellow Flags)
-   - **Auto-Renewal Trap**: "automatically renew", "unless written notice" without a reasonable opt-out window.
-   - **Excessive Penalty**: "liquidated damages" or "forfeit" that exceed reasonable damages.
-   - **Broad Non-Compete**: Look for non-compete clauses that are too long (e.g., > 1 year) or broad geographically. (Note: Non-competes are largely void in California).
-   - **Perpetual Confidentiality**: Obligations that never expire instead of standard 3-5 years.
-   - **Unfavorable Jurisdiction/Payment Terms**: Far away arbitration venues, or net-90 payment cycles.
+- 审查合同、协议、法律文件、报价单、订单、补充协议、承诺函、授权书、保密协议等；
+- 识别风险、漏洞、不公平条款、霸王条款；
+- 判断合同是否能签、是否有坑；
+- 提供修改意见、谈判建议、红线审查；
+- 对比两个版本合同差异；
+- 提取关键义务、付款节点、违约责任、终止条件；
+- 生成合同审查报告、风险清单或条款修改建议。
 
-   ### 🟢 Low Risk (Worth Noting)
-   - **Missing Audit Rights**: No right to inspect records or verify compliance.
-   
-   ### ✅ Completeness Check
-   Verify presence of: Parties, Effective Date, Term/Duration, Scope, Compensation, Termination, Confidentiality, IP, Liability, Governing Law, Signatures.
+---
 
-4. **Identify Root Causes / Provide Recommendations**: 
-   For every risk found, provide a concrete recommendation or negotiation strategy (e.g., "Add liability cap at 12 months of fees", "Limit non-compete to 1 year and specific state").
+## 2. Mandatory Workflow / 必须执行的审查流程
 
-5. **Formulate Evidence Chain**: 
-   Draft your response findings and cite the exact section numbers or quotes from the contract to back up your assessment. Report the findings to the Planner to proceed to the Report Generator phase.
+### Step 1: Intake & Context Identification / 背景识别
 
-## Guidelines
-- **Always verify assumptions**: Do not hallucinate clauses. If you can't read the file, declare the step failed and request assistance.
-- **Not Legal Advice**: Always include a disclaimer stating that your analysis is for informational purposes and does not constitute formal legal advice.
-- **Fail Gracefully**: If the text extraction is garbled, use Self-Correction to try and extract it again or ask the user for a plaintext version.
+在开始审查前，优先识别以下信息：
+
+1. **合同类型**
+   - NDA / 保密协议
+   - 服务合同
+   - 采购合同
+   - 销售合同
+   - 劳动合同 / 顾问协议
+   - SaaS / 软件许可 / 技术服务协议
+   - 租赁合同
+   - 投资协议 / 股权协议
+   - 授权协议 / IP 许可协议
+   - 保险、金融、数据处理、外包、合作协议等
+
+2. **用户角色**
+   - 甲方 / 乙方
+   - 买方 / 卖方
+   - 服务提供方 / 服务接受方
+   - 雇主 / 员工
+   - 房东 / 租客
+   - 授权方 / 被授权方
+   - 投资方 / 融资方
+   - 数据控制方 / 数据处理方
+
+3. **适用法域**
+   - 合同中约定的 governing law / applicable law；
+   - 争议解决地；
+   - 履约地；
+   - 数据、劳动、知识产权或消费者保护涉及的地区。
+
+4. **用户关注点**
+   - 是否能签；
+   - 有没有重大风险；
+   - 哪些条款要改；
+   - 哪些地方对用户不利；
+   - 是否存在付款、违约、责任、知识产权、保密、数据合规风险；
+   - 是否需要生成修改版或谈判清单。
+
+如果用户没有提供完整背景，不要停止审查。应基于合同文本进行初步审查，并在输出中单独列出“需要用户进一步确认的信息”。
+
+---
+
+### Step 2: Full Document Reading / 全文读取
+
+必须完整读取合同全文，包括：
+
+- 正文；
+- 定义条款；
+- 附件；
+- 补充协议；
+- 订单；
+- 报价单；
+- 服务说明书；
+- 数据处理附件；
+- SLA；
+- 保密附件；
+- 签署页；
+- 页眉页脚中的限制性说明。
+
+如果文件是 PDF、Word、图片或扫描件，应使用可用的文件读取、OCR 或文档解析工具提取文本。
+
+如果文本提取失败、乱码严重、缺页、附件缺失或扫描不清，应明确说明无法完整审查，并请求用户提供清晰版本或纯文本版本。
+
+不得臆造合同内容。所有风险判断必须基于合同原文或明确标记为“文本缺失导致无法判断”。
+
+---
+
+### Step 3: Contract Map / 合同结构梳理
+
+先提取合同的基本结构，形成合同地图：
+
+- 合同名称；
+- 签约主体；
+- 生效日期；
+- 合同期限；
+- 合同目的；
+- 服务 / 商品 / 标的范围；
+- 价格与付款；
+- 交付与验收；
+- 双方主要义务；
+- 保密义务；
+- 知识产权归属；
+- 数据与隐私；
+- 违约责任；
+- 赔偿与责任限制；
+- 终止与解除；
+- 争议解决；
+- 通知条款；
+- 签署信息；
+- 附件清单。
+
+如发现合同结构混乱、关键条款缺失、附件未提供、条款编号错误、交叉引用错误，应作为独立风险列出。
+
+---
+
+## 4. Risk Review Framework / 风险审查框架
+
+审查时必须覆盖以下维度。
+
+---
+
+### A. Commercial Terms / 商业条款风险
+
+检查：
+
+- 价格是否明确；
+- 是否含税；
+- 税费承担方是否明确；
+- 发票类型与开票时间；
+- 付款节点是否清晰；
+- 付款条件是否过于严苛；
+- 是否存在长期账期，如 Net 90、Net 120；
+- 是否存在单方扣款、抵扣、拒付权；
+- 是否约定逾期付款利息；
+- 是否约定费用调整机制；
+- 是否存在未定义的额外费用；
+- 是否有最低采购量、最低服务期或隐藏成本。
+
+典型风险：
+
+- 用户已履约但付款条件依赖对方单方确认；
+- 验收标准不明确导致无法收款；
+- 对方可以无限期拖延验收或付款；
+- 付款义务与争议金额未区分，导致小争议影响全部付款。
+
+---
+
+### B. Scope, Delivery & Acceptance / 范围、交付与验收风险
+
+检查：
+
+- 服务范围是否清晰；
+- 交付物是否可衡量；
+- 时间节点是否明确；
+- 验收标准是否客观；
+- 验收期限是否明确；
+- 是否约定逾期未反馈视为验收通过；
+- 变更需求是否有书面确认机制；
+- 是否存在无限修改、无限服务、无限支持义务；
+- 是否存在超出报价范围的隐含义务。
+
+典型风险：
+
+- “满足甲方要求”“达到甲方满意”等主观标准；
+- 没有验收期限；
+- 没有需求变更机制；
+- 服务范围过宽但价格固定；
+- 项目延期责任全部压在用户一方。
+
+---
+
+### C. Termination / 解除与终止风险
+
+检查：
+
+- 双方是否都有合理解除权；
+- 是否存在单方任意解除权；
+- 解除通知期是否合理；
+- 解除后的付款、交付、退款、数据返还是否明确；
+- 重大违约是否有补救期；
+- 合同终止后哪些条款继续有效；
+- 是否存在对用户不利的提前终止罚金；
+- 是否存在自动续约陷阱。
+
+高风险示例：
+
+- 对方可随时无理由终止，但用户无对应权利；
+- 用户已投入成本但合同允许对方无补偿解除；
+- 自动续约但退出窗口过短或通知方式苛刻；
+- 终止后仍要求用户承担过宽义务。
+
+---
+
+### D. Liability & Indemnity / 责任限制与赔偿风险
+
+检查：
+
+- 是否存在责任上限；
+- 责任上限金额是否合理；
+- 是否排除间接损失、利润损失、商誉损失；
+- 是否存在无限责任；
+- 赔偿义务是否双向；
+- 赔偿范围是否过宽；
+- 是否包括第三方索赔；
+- 是否有赔偿程序；
+- 是否有通知、抗辩控制、和解同意机制；
+- 是否存在“全额赔偿”“全部损失”“任何损害”等过宽措辞。
+
+高风险示例：
+
+- 用户承担无限赔偿责任；
+- 只有用户赔偿对方，对方不承担对等赔偿；
+- 用户需赔偿对方的间接损失、预期利润、律师费、调查费等全部费用；
+- 对方可自行和解并要求用户买单。
+
+建议方向：
+
+- 增加责任上限，例如“不超过过去 12 个月已支付费用”；
+- 排除间接损失；
+- 赔偿义务限定为因违约、侵权、重大过失或故意行为造成的直接损失；
+- 增加赔偿程序控制条款。
+
+---
+
+### E. IP & Work Product / 知识产权与成果归属风险
+
+检查：
+
+- 背景知识产权是否保留；
+- 项目成果归属是否明确；
+- 是否存在“一切知识产权均归对方所有”的过宽表述；
+- 是否区分通用工具、模板、方法论、代码库、模型、算法、素材、数据；
+- 是否有使用许可范围；
+- 是否可继续使用经验、通用能力和非客户专属成果；
+- 是否有第三方素材授权风险；
+- 是否涉及开源软件合规；
+- 是否涉及 AI 生成内容归属。
+
+高风险示例：
+
+- 用户将所有既有 IP、工具、方法论、通用代码一并转让；
+- 对方获得永久、全球、免费、可转授权、不可撤销许可，但未限制用途；
+- 未区分“定制开发成果”和“用户既有资产”；
+- 员工、顾问、供应商成果链条不完整。
+
+建议方向：
+
+- 明确保留 pre-existing IP；
+- 将转让范围限定为合同项下专门为对方开发并已付款的交付成果；
+- 对通用工具、经验、模板、算法、模型、组件仅授予有限使用许可；
+- 增加第三方素材和开源合规责任边界。
+
+---
+
+### F. Confidentiality / 保密条款风险
+
+检查：
+
+- 保密信息定义是否过宽；
+- 保密期限是否合理；
+- 是否区分商业秘密与一般保密信息；
+- 是否有例外情形；
+- 是否允许向员工、顾问、律师、会计师、关联方披露；
+- 是否要求接收方承担过高责任；
+- 是否规定返还或销毁义务；
+- 是否与公开信息、独立开发信息冲突。
+
+中高风险示例：
+
+- 永久保密且不区分商业秘密和普通信息；
+- 保密义务单向约束用户；
+- 违约金过高；
+- 保密信息定义包含“任何信息”，没有合理例外。
+
+建议方向：
+
+- 一般保密信息设置 3-5 年期限；
+- 商业秘密可在其保持商业秘密期间持续保密；
+- 增加公开信息、已知信息、独立开发、第三方合法取得、依法披露等例外。
+
+---
+
+### G. Data Protection & Privacy / 数据保护与隐私风险
+
+如果合同涉及个人信息、客户数据、员工数据、行为数据、健康数据、金融数据、保险数据、跨境数据或系统访问，应检查：
+
+- 双方数据角色；
+- 数据处理目的；
+- 数据类型；
+- 数据主体类别；
+- 安全措施；
+- 数据泄露通知；
+- 分包处理；
+- 数据留存和删除；
+- 数据返还；
+- 跨境传输；
+- 审计权；
+- 合规责任；
+- 是否需要 DPA / Data Processing Agreement；
+- 是否涉及 GDPR、CCPA/CPRA、PIPL 或其他适用法律。
+
+高风险示例：
+
+- 处理个人数据但没有任何数据保护条款；
+- 用户承担全部数据合规责任，而对方实际控制处理方式；
+- 未约定数据泄露通知时限；
+- 未限制对方二次使用、训练 AI 模型或转售数据；
+- 未约定数据删除和返还。
+
+---
+
+### H. Compliance / 合规与监管风险
+
+检查是否涉及：
+
+- 反商业贿赂；
+- 反洗钱；
+- 出口管制；
+- 制裁合规；
+- 保险监管；
+- 金融监管；
+- 医疗健康；
+- 网络安全；
+- 数据安全；
+- 劳动用工；
+- 消费者保护；
+- 广告合规；
+- 行业资质许可；
+- 安全生产；
+- 政府采购；
+- ESG 或供应链合规。
+
+如果合同涉及高度监管行业，应提示用户进行专项法律审查。
+
+---
+
+### I. Dispute Resolution & Governing Law / 争议解决与适用法律风险
+
+检查：
+
+- 适用法律是否明确；
+- 管辖法院或仲裁机构是否明确；
+- 争议地点是否对用户不利；
+- 仲裁费用是否过高；
+- 是否排除禁令救济；
+- 是否要求先协商或调解；
+- 是否存在单方选择管辖权；
+- 是否有语言版本冲突条款；
+- 跨境合同是否有执行难度。
+
+中高风险示例：
+
+- 用户所在地与争议地相距过远；
+- 对方可单方选择法院或仲裁；
+- 合同语言版本不一致但未明确优先版本；
+- 选择的法律与履约地、主体所在地完全不匹配。
+
+---
+
+### J. Operational & Drafting Issues / 执行与文本问题
+
+检查：
+
+- 定义是否一致；
+- 条款编号是否错误；
+- 交叉引用是否错误；
+- 附件是否缺失；
+- 日期是否矛盾；
+- 主体名称是否一致；
+- 签约主体是否具备资质；
+- 授权代表是否明确；
+- 通知地址是否完整；
+- 电子签、扫描件、传真件效力是否明确；
+- 合同与订单、SOW、附件是否冲突；
+- 是否存在空白项、未填写金额、未填写日期；
+- 是否有中英文版本冲突。
+
+---
+
+## 5. Contract-Type Specific Checks / 合同类型专项审查
+
+根据合同类型，必须增加专项审查。
+
+### NDA / 保密协议
+
+重点检查：
+
+- 保密信息定义；
+- 保密期限；
+- 使用目的限制；
+- 允许披露对象；
+- 例外信息；
+- 返还销毁；
+- 违约责任；
+- 是否包含非招揽、非竞争、IP 转让等夹带条款。
+
+### Service Agreement / 服务合同
+
+重点检查：
+
+- 服务范围；
+- 交付物；
+- 项目周期；
+- 验收；
+- 付款；
+- 需求变更；
+- 人员替换；
+- 违约责任；
+- 成果归属；
+- 售后支持。
+
+### Procurement / Purchase Agreement / 采购合同
+
+重点检查：
+
+- 规格；
+- 数量；
+- 价格；
+- 交货；
+- 验收；
+- 质量保证；
+- 退换货；
+- 质保期；
+- 供应中断；
+- 召回；
+- 逾期交付；
+- 付款与发票。
+
+### Employment / Consultant Agreement / 劳动或顾问协议
+
+重点检查：
+
+- 职责范围；
+- 报酬；
+- 工作时间；
+- 竞业限制；
+- 非招揽；
+- 保密；
+- IP 归属；
+- 费用报销；
+- 解除条件；
+- 劳动法合规；
+- 独立承包商身份风险。
+
+如涉及竞业限制，应根据具体法域核验最新法律要求，不得仅凭通用经验下结论。
+
+### SaaS / Software / Technology Agreement
+
+重点检查：
+
+- 许可范围；
+- 用户数；
+- 使用限制；
+- SLA；
+- 数据安全；
+- 数据所有权；
+- 系统可用性；
+- 服务中断；
+- AI / 模型训练数据使用；
+- 开源软件；
+- 第三方组件；
+- 安全漏洞；
+- 审计；
+- 退出和数据迁移。
+
+### Lease Agreement / 租赁合同
+
+重点检查：
+
+- 租期；
+- 租金；
+- 押金；
+- 维修责任；
+- 用途限制；
+- 转租；
+- 提前解约；
+- 违约金；
+- 物业费用；
+- 续租；
+- 交还标准；
+- 保险责任。
+
+---
+
+## 6. Risk Scoring / 风险评级规则
+
+每个风险必须按照以下维度评估：
+
+### Severity / 严重程度
+
+- **High / 高风险**：可能导致重大经济损失、无限责任、重大违约、核心资产丧失、合规处罚、业务无法退出或重大诉讼风险。
+- **Medium / 中风险**：可能造成商业不利、执行困难、付款延迟、责任不清、谈判地位下降。
+- **Low / 低风险**：文本可优化、表述不清、执行细节不足，但短期内不构成重大风险。
+- **Info / 提醒项**：需要用户确认背景或业务判断，不直接构成风险。
+
+### Priority / 修改优先级
+
+- **P0 必须修改**：不建议在未修改前签署；
+- **P1 强烈建议修改**：对用户明显不利，应优先谈判；
+- **P2 建议优化**：可作为谈判筹码；
+- **P3 可接受但需知情**：风险可控，提醒用户注意。
+
+---
+
+## 7. Evidence Chain / 证据链要求
+
+每个风险必须包含：
+
+1. 风险标题；
+2. 风险等级；
+3. 涉及条款号；
+4. 合同原文摘录；
+5. 风险说明；
+6. 对用户的影响；
+7. 修改建议；
+8. 可选谈判策略；
+9. 如有必要，提供参考性替代表述。
+
+不得无引用地判断合同存在某项风险。
+
+如果合同未包含相关条款，应写明：
+
+- “合同未发现相关条款”
+- “因缺失该条款，可能导致……”
+- “建议补充……”
+
+---
+
+## 8. Recommendation Style / 修改建议规范
+
+修改建议应尽量具体、可执行。
+
+不要只写：
+
+- “建议修改”
+- “建议协商”
+- “注意风险”
+
+应写成：
+
+- “建议将赔偿责任限定为因一方故意、重大过失或实质违约造成的直接损失。”
+- “建议增加责任上限，金额可设为过去 12 个月已支付或应支付费用总额。”
+- “建议增加验收期限：交付后 10 个工作日内未书面提出异议，视为验收通过。”
+- “建议将自动续约通知期调整为到期前 30-60 日内均可书面通知不续约。”
+- “建议明确背景知识产权归原权利人所有，合同仅转让已付款且专门开发的交付成果。”
+
+---
+
+## 9. Output Format / 标准输出格式
+
+最终审查结果必须按以下结构输出：
+
+### 1. 审查摘要
+
+- 合同类型：
+- 用户角色：
+- 适用法律 / 管辖：
+- 合同金额 / 期限：
+- 总体风险等级：
+- 是否建议直接签署：
+- 核心结论：
+
+### 2. 重大风险总览表
+
+| 序号 | 风险等级 | 优先级 | 条款 | 风险点 | 建议动作 |
+|---|---|---|---|---|---|
+
+### 3. 逐条风险分析
+
+每条风险使用以下格式：
+
+#### 风险 X：标题
+
+- 风险等级：
+- 修改优先级：
+- 涉及条款：
+- 原文摘录：
+- 问题说明：
+- 对用户影响：
+- 修改建议：
+- 建议替代表述：
+- 谈判策略：
+
+### 4. 缺失条款检查
+
+列出合同中未发现但建议补充的条款：
+
+- 责任上限；
+- 验收机制；
+- 付款逾期责任；
+- 数据保护；
+- IP 背景权利保留；
+- 需求变更机制；
+- 终止后处理；
+- 通知条款；
+- 争议解决；
+- 不可抗力；
+- 附件优先级；
+- 版本冲突规则。
+
+### 5. 可接受条款
+
+列出相对合理、可接受或对用户有利的条款，避免只输出负面内容。
+
+### 6. 谈判优先级
+
+分为：
+
+- 必须坚持；
+- 优先争取；
+- 可作为让步；
+- 可接受不改。
+
+### 7. 待确认问题
+
+列出需要用户进一步确认的信息，例如：
+
+- 用户身份和签约立场；
+- 合同金额；
+- 履约地；
+- 是否涉及个人信息；
+- 是否涉及 AI、数据训练、源代码、商业秘密；
+- 是否已有附件或订单；
+- 是否有历史合作背景。
+
+### 8. 免责声明
+
+必须包含：
+
+“以上审查仅基于当前提供的合同文本和背景信息，属于一般性合同风险分析和修改建议，不构成正式法律意见。对于重大交易、高金额合同、跨境事项、劳动用工、金融、数据合规、知识产权或潜在争议事项，建议交由具备相应法域执业资格的律师进一步复核。”
+
+---
+
+## 10. Failure Handling / 异常处理
+
+如果出现以下情况，必须明确说明限制：
+
+- 文件无法打开；
+- 文本提取乱码；
+- 合同缺页；
+- 附件缺失；
+- 扫描件无法识别；
+- 条款编号混乱；
+- 用户未提供合同文本；
+- 合同语言与用户要求语言不同；
+- 法域不明确；
+- 文件内容可能不是合同。
+
+处理方式：
+
+1. 说明当前无法完整审查的原因；
+2. 尽可能基于已读取部分做初步审查；
+3. 明确哪些结论不可靠；
+4. 请求用户补充清晰版本、附件或背景信息。
+
+不得在文本缺失时编造条款或假设条款存在。
+
+---
+
+## 11. Quality Standards / 质量标准
+
+合同审查必须满足以下标准：
+
+- 全文阅读，不只看摘要；
+- 角色导向，不脱离用户立场；
+- 证据驱动，每个风险有条款依据；
+- 风险分级清晰；
+- 修改建议具体；
+- 不夸大，不恐吓；
+- 不做未经核验的法律定论；
+- 对缺失信息明确标注；
+- 对重大风险给出谈判优先级；
+- 输出结构稳定，便于用户直接转交律师、业务负责人或对方谈判。
