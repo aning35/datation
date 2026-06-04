@@ -61,9 +61,9 @@ export const LogPanel: React.FC<LogPanelProps> = ({
 
     return (
         <aside
-            className={`log-panel-container flex flex-col transition-all duration-300 ease-in-out shadow-inner h-full shrink-0 ${logPanelOpen
-                ? 'w-1/3 min-w-[320px] opacity-100 border-l border-slate-700'
-                : 'w-0 max-w-0 opacity-0 overflow-hidden border-none !p-0 !m-0 hidden'
+            className={`log-panel-container flex flex-col shadow-inner h-full shrink-0 ${logPanelOpen
+                ? 'w-1/3 min-w-[320px] border-l border-slate-700'
+                : 'hidden'
                 }`}
         >
             <div
@@ -94,7 +94,7 @@ export const LogPanel: React.FC<LogPanelProps> = ({
                     <Virtuoso
                         ref={virtuosoRef}
                         data={logs}
-                        followOutput="smooth"
+                        followOutput={true}
                         itemContent={(_index, log) => (
                             <div className="px-3 pb-2">
                                 <LogItem log={log} cardClass={getLogLevelStyle(log.level)} />
