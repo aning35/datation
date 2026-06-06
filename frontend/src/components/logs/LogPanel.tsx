@@ -1,16 +1,29 @@
-import React, { useRef } from 'react';
-import { Terminal, ChevronRight } from 'lucide-react';
+import React, { useRef, useState, useCallback, useMemo } from 'react';
+import { Terminal, ChevronRight, ChevronDown } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import type { VirtuosoHandle } from 'react-virtuoso';
 import type { LogEntry } from '../../types';
 import { useTranslation } from '../../i18n/useTranslation';
+
+// Max characters to show before truncating detail text
+const DETAIL_TRUNCATE_LEN = 500;
+// Max log entries to feed into Virtuoso (older entries are discarded from view)
+const MAX_DISPLAY_LOGS = 500;
 
 interface LogItemProps {
     log: LogEntry;
     cardClass: string;
 }
 
-const LogItem: React.FC<LogItemProps> = ({ log, cardClass }) => {
+const LogItem: React.FC<LogItemProps> = React.memo(({ log, cardClass }) => {
+    const [expanded, setExpanded] = useState(false);
+
+    const detail = log.detail;
+    const needsTruncate = detail && detail.length > DETAIL_TRUNCATE_LEN;
+    const displayDetail = detail
+        ? (needsTruncate && !expanded ? detail.slice(0, DETAIL_TRUNCATE_LEN) : detail)
+        : null;
+
     return (
         <div className={`log-card ${cardClass}`}>
             <div className="flex items-center gap-2 flex-wrap">
@@ -22,14 +35,27 @@ const LogItem: React.FC<LogItemProps> = ({ log, cardClass }) => {
                 )}
                 <span className="log-title-text font-medium leading-relaxed">{log.title}</span>
             </div>
-            {log.detail && (
+            {displayDetail && (
                 <div className="log-description-area custom-scrollbar">
-                    {log.detail}
+                    {displayDetail}
+                    {needsTruncate && (
+                        <button
+                            onClick={() => setExpanded(prev => !prev)}
+                            className="inline-flex items-center gap-0.5 ml-1 text-blue-400 hover:text-blue-300 text-[10px] font-semibold cursor-pointer select-none"
+                        >
+                            {expanded ? (
+                                <>收起<ChevronRight className="w-3 h-3" /></>
+                            ) : (
+                                <>...展开 ({Math.round(detail.length / 1000)}KB)<ChevronDown className="w-3 h-3" /></>
+                            )}
+                        </button>
+                    )}
                 </div>
             )}
         </div>
     );
-};
+});
+LogItem.displayName = 'LogItem';
 
 interface LogPanelProps {
     logs: LogEntry[];
@@ -49,7 +75,7 @@ export const LogPanel: React.FC<LogPanelProps> = ({
     const { t } = useTranslation();
     const virtuosoRef = useRef<VirtuosoHandle>(null);
 
-    const getLogLevelStyle = (level: string) => {
+    const getLogLevelStyle = useCallback((level: string) => {
         switch (level) {
             case 'llm_start': return 'log-card-llm-start';
             case 'llm_end': return 'log-card-llm-end';
@@ -57,15 +83,20 @@ export const LogPanel: React.FC<LogPanelProps> = ({
             case 'tool_end': return 'log-card-tool-end';
             default: return 'log-card-default';
         }
-    };
+    }, []);
+
+    // Cap displayed logs to avoid massive Virtuoso dataset
+    const displayLogs = useMemo(() => {
+        if (logs.length <= MAX_DISPLAY_LOGS) return logs;
+        return logs.slice(logs.length - MAX_DISPLAY_LOGS);
+    }, [logs]);
+
+    if (!logPanelOpen) {
+        return null;
+    }
 
     return (
-        <aside
-            className={`log-panel-container flex flex-col shadow-inner h-full shrink-0 ${logPanelOpen
-                ? 'w-1/3 min-w-[320px] border-l border-slate-700'
-                : 'hidden'
-                }`}
-        >
+        <aside className="log-panel-container flex flex-col shadow-inner h-full shrink-0 w-1/3 min-w-[320px] border-l border-slate-700">
             <div
                 className="log-panel-header px-4 py-3 flex items-center justify-between cursor-pointer select-none hover:bg-[#293548] shrink-0"
                 onClick={() => setLogPanelOpen(false)}
@@ -93,8 +124,10 @@ export const LogPanel: React.FC<LogPanelProps> = ({
                 ) : (
                     <Virtuoso
                         ref={virtuosoRef}
-                        data={logs}
-                        followOutput={true}
+                        data={displayLogs}
+                        followOutput="smooth"
+                        defaultItemHeight={60}
+                        increaseViewportBy={{ top: 100, bottom: 100 }}
                         itemContent={(_index, log) => (
                             <div className="px-3 pb-2">
                                 <LogItem log={log} cardClass={getLogLevelStyle(log.level)} />

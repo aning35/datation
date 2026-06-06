@@ -18,6 +18,7 @@ interface ChatInputProps {
     query: string;
     setQuery: (query: string) => void;
     isProcessing: boolean;
+    isPaused?: boolean;
     handleAnalysis: () => void;
     stopAnalysis: () => void;
     chunksLength: number;
@@ -52,6 +53,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     query,
     setQuery,
     isProcessing,
+    isPaused = false,
     handleAnalysis,
     stopAnalysis,
     chunksLength,
@@ -625,16 +627,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
-                                    if (!isProcessing) {
+                                    if (!isProcessing || isPaused) {
                                         handleSend();
                                     }
                                 }
                             }}
-                            disabled={isProcessing}
+                            disabled={isProcessing && !isPaused}
                             placeholder={
                                 dragOver ? t('chat.placeholderDrag') :
-                                    isProcessing ? t('chat.placeholderProcessing') :
-                                        t('chat.placeholder')
+                                    (isProcessing && !isPaused) ? t('chat.placeholderProcessing') :
+                                        isPaused ? (language === 'zh' ? '请输入您的回复以继续... (Shift+Enter 换行)' : 'Type your reply to continue... (Shift+Enter for newline)') :
+                                            t('chat.placeholder')
                             }
                             className={isMultiLine 
                                 ? "w-full bg-transparent py-1 pl-1 pr-1 resize-none outline-none text-slate-800 text-[15px] leading-relaxed disabled:opacity-60 scrollbar-thin scrollbar-thumb-slate-300"
@@ -739,7 +742,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                                 onChange={handleFileChange}
                             />
 
-                            {isProcessing ? (
+                            {(isProcessing && !isPaused) ? (
                                 <button
                                     onClick={stopAnalysis}
                                     title={t('chat.stop')}
@@ -752,7 +755,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                                     onClick={handleSend}
                                     disabled={!query.trim()}
                                     title={t('chat.send')}
-                                    className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full flex items-center justify-center transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-sm w-9 h-9"
+                                    className={`p-2 text-white rounded-full flex items-center justify-center transition-all disabled:opacity-50 disabled:bg-slate-300 shadow-sm w-9 h-9 ${isPaused ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-600 hover:bg-blue-700'}`}
                                 >
                                     <Send className="w-4 h-4 ml-[-2px] mt-[1px]" />
                                 </button>

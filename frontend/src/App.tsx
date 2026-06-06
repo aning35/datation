@@ -860,7 +860,7 @@ const App: React.FC = () => {
               {/* Log button — Fixed on the right side of the Tab bar */}
               <div className="ml-auto flex items-center pr-1 gap-1">
                 {/* Continue button — Shown when session is paused waiting for confirmation */}
-                {isPaused && !isProcessing && (
+                {isPaused && (
                   <button
                     onClick={() => {
                       setIsPaused(false);
@@ -961,6 +961,7 @@ const App: React.FC = () => {
                 query={query}
                 setQuery={setQuery}
                 isProcessing={isProcessing}
+                isPaused={isPaused}
                 handleAnalysis={handleAnalysis}
                 stopAnalysis={stopAnalysis}
                 chunksLength={chunks.length}

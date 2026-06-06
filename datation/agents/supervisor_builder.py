@@ -78,7 +78,17 @@ def compile_supervisor_graph(
     }
 
     def _parse(raw: str, fallback: dict) -> dict:
-        return extract_json(raw, fallback=fallback)
+        result = extract_json(raw, fallback=fallback)
+        # LLM may return a JSON array like [{"next": "QAAgent"}] instead of a dict;
+        # unwrap single-element lists, otherwise fall back to the default.
+        if isinstance(result, list):
+            for item in result:
+                if isinstance(item, dict):
+                    return item
+            return fallback
+        if not isinstance(result, dict):
+            return fallback
+        return result
 
     def _check_and_handle_confirmation(content: str, agent_name: str):
         """
