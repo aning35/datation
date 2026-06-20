@@ -96,7 +96,10 @@ export const en = {
     switchToSource: 'Switch to Markdown source',
     switchToPreview: 'Switch to preview mode',
     exportPdf: 'Export PDF',
-    scrollToBottom: 'Back to latest content'
+    scrollToBottom: 'Back to latest content',
+    openHtmlReport: 'Open Interactive Report',
+    htmlReportDesc: 'Open the full HTML report in a new tab',
+    htmlReportReady: 'HTML Report Ready'
   },
   plan: {
     title: 'Mission Plan',

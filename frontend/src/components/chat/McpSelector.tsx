@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
+import type { McpServerInfo } from './ChatInput';
 
 interface McpSelectorProps {
-  mcpServers: string[];
+  mcpServers: McpServerInfo[];
   enabledMcpServers: string[];
   setEnabledMcpServers: (servers: string[]) => void;
   isOpen: boolean;
@@ -38,19 +39,25 @@ export const McpSelector: React.FC<McpSelectorProps> = ({
 
   if (!isOpen) return null;
 
-  const toggleServer = (server: string) => {
-    if (enabledMcpServers.includes(server)) {
-      setEnabledMcpServers(enabledMcpServers.filter(s => s !== server));
+  const toggleServer = (server: McpServerInfo) => {
+    if (server.status === 'error') return; // Cannot toggle servers in error state
+    if (enabledMcpServers.includes(server.name)) {
+      setEnabledMcpServers(enabledMcpServers.filter(s => s !== server.name));
     } else {
-      setEnabledMcpServers([...enabledMcpServers, server]);
+      setEnabledMcpServers([...enabledMcpServers, server.name]);
     }
   };
 
   const toggleAll = () => {
-    if (enabledMcpServers.length === mcpServers.length) {
+    const validServers = mcpServers.filter(s => s.status !== 'error').map(s => s.name);
+    // If all valid servers are enabled, disable them all.
+    // Otherwise, enable all valid servers.
+    const allValidEnabled = validServers.length > 0 && validServers.every(name => enabledMcpServers.includes(name));
+    
+    if (allValidEnabled) {
       setEnabledMcpServers([]);
     } else {
-      setEnabledMcpServers(mcpServers);
+      setEnabledMcpServers(validServers);
     }
   };
 
@@ -62,28 +69,49 @@ export const McpSelector: React.FC<McpSelectorProps> = ({
           onClick={toggleAll}
           className="text-xs text-blue-600 hover:text-blue-700"
         >
-          {enabledMcpServers.length === mcpServers.length ? t('chat.deselectAll') : t('chat.selectAll')}
+          {enabledMcpServers.length >= mcpServers.filter(s => s.status !== 'error').length && mcpServers.filter(s => s.status !== 'error').length > 0 ? t('chat.deselectAll') : t('chat.selectAll')}
         </button>
       </div>
-      <div className="space-y-1 max-h-60 overflow-y-auto">
+      <div className="space-y-1 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
         {mcpServers.map(server => (
           <button
-            key={server}
+            key={server.name}
             onClick={() => toggleServer(server)}
-            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 text-left"
+            disabled={server.status === 'error'}
+            title={server.error || undefined}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left ${
+              server.status === 'error' ? 'opacity-60 cursor-not-allowed bg-red-50/50' : 'hover:bg-slate-50'
+            }`}
           >
-            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-              enabledMcpServers.includes(server)
+            <div className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
+              enabledMcpServers.includes(server.name) && server.status !== 'error'
                 ? 'bg-blue-500 border-blue-500'
-                : 'border-slate-300'
+                : server.status === 'error'
+                  ? 'border-red-300 bg-red-100'
+                  : 'border-slate-300 bg-white'
             }`}>
-              {enabledMcpServers.includes(server) && (
+              {enabledMcpServers.includes(server.name) && server.status !== 'error' && (
                 <Check className="w-3 h-3 text-white" />
               )}
             </div>
-            <span className="text-sm text-slate-700">{server}</span>
+            <div className="flex-1 min-w-0">
+              <span className={`text-sm block truncate ${server.status === 'error' ? 'text-red-700' : 'text-slate-700'}`}>
+                {server.name}
+              </span>
+              {server.status === 'error' && (
+                <span className="text-[10px] text-red-500 block truncate" title={server.error || ''}>
+                  {server.error || 'Connection failed'}
+                </span>
+              )}
+            </div>
+            {server.status === 'error' && (
+              <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
+            )}
           </button>
         ))}
+        {mcpServers.length === 0 && (
+          <div className="text-sm text-slate-500 text-center py-4">No MCP servers found</div>
+        )}
       </div>
     </div>
   );

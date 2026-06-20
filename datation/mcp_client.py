@@ -52,6 +52,7 @@ class MCPManager:
     def __init__(self, config_path: str = "~/.datation/mcp_servers.json"):
         self.config_path = os.path.expanduser(config_path)
         self.sessions: Dict[str, ClientSession] = {}
+        self.server_status: Dict[str, dict] = {}
         self.exit_stack = AsyncExitStack()
 
     async def initialize(self):
@@ -66,6 +67,7 @@ class MCPManager:
         servers = config.get("mcpServers", {})
         
         for name, cfg in servers.items():
+            self.server_status[name] = {"status": "connecting", "error": None}
             try:
                 command = cfg.get("command")
                 args = cfg.get("args", [])
@@ -85,11 +87,19 @@ class MCPManager:
                 stdio, write = stdio_transport
                 session = await self.exit_stack.enter_async_context(ClientSession(stdio, write))
                 
-                await session.initialize()
+                # Prevent hanging if subprocess crashes (e.g. missing NPM package)
+                await asyncio.wait_for(session.initialize(), timeout=5.0)
+                
                 self.sessions[name] = session
+                self.server_status[name] = {"status": "connected", "error": None}
                 print(f"[MCP] Successfully established connection to Server: {name}")
                 
+            except asyncio.TimeoutError:
+                error_msg = "Connection timeout after 5s. The server process may have crashed (e.g., missing dependencies)."
+                self.server_status[name] = {"status": "error", "error": error_msg}
+                print(f"[MCP] Warning - Failed to start server {name}: {error_msg}")
             except Exception as e:
+                self.server_status[name] = {"status": "error", "error": str(e)}
                 print(f"[MCP] Warning - Failed to start server {name}: {e}")
 
     async def get_tools(self) -> List[StructuredTool]:

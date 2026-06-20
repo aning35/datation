@@ -123,15 +123,23 @@ def save_mcp_config(payload: dict = Body(...)):
 
 @router.get("/mcp/servers")
 def get_mcp_servers():
-    """Get the list of available MCP servers"""
+    """Get the list of available MCP servers and their runtime status"""
     mcp_path = Path(MCP_CONFIG)
+    servers = []
     try:
         if mcp_path.exists():
             with open(mcp_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 mcp_servers_dict = data.get("mcpServers", {})
-                return {"servers": list(mcp_servers_dict.keys())}
-        return {"servers": []}
+                
+                for name in mcp_servers_dict.keys():
+                    runtime_info = state.mcp_manager.server_status.get(name, {})
+                    servers.append({
+                        "name": name,
+                        "status": runtime_info.get("status", "unknown"),
+                        "error": runtime_info.get("error")
+                    })
+        return {"servers": servers}
     except Exception as e:
         return {"servers": []}
 

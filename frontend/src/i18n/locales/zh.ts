@@ -96,7 +96,10 @@ export const zh = {
     switchToSource: '切换为 Markdown 源码',
     switchToPreview: '切换为预览模式',
     exportPdf: '导出 PDF',
-    scrollToBottom: '回到最新内容'
+    scrollToBottom: '回到最新内容',
+    openHtmlReport: '打开交互式报告',
+    htmlReportDesc: '在新标签页中打开完整的 HTML 报告',
+    htmlReportReady: 'HTML 报告已就绪'
   },
   plan: {
     title: '任务规划',

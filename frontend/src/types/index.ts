@@ -10,6 +10,7 @@ export interface AgentChunk {
     plan?: string[];
     past_steps?: [string, any][];
     created_at?: string;
+    report_html_url?: string;
 }
 
 export interface LogEntry {

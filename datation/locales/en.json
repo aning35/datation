@@ -48,7 +48,9 @@
       "GENERATE_OUTLINE": "Generating Report Outline",
       "GENERATE_CHAPTER": "Writing Report Chapter",
       "MERGE_REPORT": "Merging Report",
-      "CONVERT_HTML": "Converting to HTML"
+      "CONVERT_HTML": "Converting to HTML",
+      "HTML_REPORT_READY": "📊 HTML Report Ready",
+      "HTML_REPORT_READY_DESC": "Report generated. Click the card below to open the full interactive HTML report in a new tab."
     }
   },
   "logs": {

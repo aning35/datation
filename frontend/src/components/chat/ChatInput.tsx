@@ -14,6 +14,12 @@ interface UploadedFile {
     status?: 'uploading' | 'done' | 'error';
 }
 
+export interface McpServerInfo {
+    name: string;
+    status: string;
+    error: string | null;
+}
+
 interface ChatInputProps {
     query: string;
     setQuery: (query: string) => void;
@@ -90,7 +96,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
     const [uploading, setUploading] = useState(false);
     const [dragOver, setDragOver] = useState(false);
-    const [mcpServers, setMcpServers] = useState<string[]>([]);
+    const [mcpServers, setMcpServers] = useState<McpServerInfo[]>([]);
     const [showMcpSelector, setShowMcpSelector] = useState(false);
     const [quickInputs, setQuickInputs] = useState<string[]>([]);
     const [showAgentSelect, setShowAgentSelect] = useState(false);

@@ -937,6 +937,25 @@ async def stream_analysis(request: AnalyzeRequest, fastapi_req: Request):
                         desc = t("trace.codes.HTML_GENERATED", lang) if html else t("trace.codes.COMPLETED_TEXT", lang)
                         action_executed = [t("trace.codes.CONVERT_HTML", lang), desc]
 
+                        # When HTML report was successfully generated, emit an extra
+                        # chat-visible chunk so the user can open it directly from the
+                        # conversation without switching to the Files tab.
+                        if html and thread_id:
+                            report_chunk = {
+                                "type": "node",
+                                "node": full_node_path,
+                                "run_id": f"report_html_{int(time.time()*1000)}",
+                                "action_executed": [t("trace.codes.HTML_REPORT_READY", lang), t("trace.codes.HTML_REPORT_READY_DESC", lang)],
+                                "report_html_url": "report.html",
+                                "plan": current_plan,
+                                "past_steps": completed_tasks,
+                                "final_response": None,
+                                "status": "completed",
+                                "created_at": datetime.now(timezone.utc).isoformat()
+                            }
+                            append_log(report_chunk)
+                            yield f"data: {json.dumps(report_chunk, ensure_ascii=False)}\n\n"
+
                     else:
                         # Skip LangGraph internal/framework events (such as __end__, agent_app)
                         # These events' output contains full state, which leaks old response

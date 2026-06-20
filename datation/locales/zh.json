@@ -48,7 +48,9 @@
       "GENERATE_OUTLINE": "生成报告大纲",
       "GENERATE_CHAPTER": "撰写报告章节",
       "MERGE_REPORT": "合并报告",
-      "CONVERT_HTML": "转换为 HTML"
+      "CONVERT_HTML": "转换为 HTML",
+      "HTML_REPORT_READY": "📊 HTML 报告已就绪",
+      "HTML_REPORT_READY_DESC": "报告已生成，点击下方卡片即可在新标签页中打开完整的交互式 HTML 报告。"
     }
   },
   "logs": {

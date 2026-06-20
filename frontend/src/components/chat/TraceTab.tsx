@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Brain, Navigation2, ShieldAlert, Sparkles, CodeXml, Eye, RotateCcw, Loader2, Settings, User as UserIcon, FileText, Search, Copy, Check, ClipboardList, Maximize2, Minimize2, ChevronsDown, History, Server, Printer, Undo2, BellRing } from 'lucide-react';
+import { Brain, Navigation2, ShieldAlert, Sparkles, CodeXml, Eye, RotateCcw, Loader2, Settings, User as UserIcon, FileText, Search, Copy, Check, ClipboardList, Maximize2, Minimize2, ChevronsDown, History, Server, Printer, Undo2, BellRing, ExternalLink } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import type { AgentChunk } from '../../types';
 import { useTranslation } from '../../i18n/useTranslation';
@@ -28,6 +28,62 @@ interface TraceTabProps {
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:18321';
 
+// Global cache: image URL → { width, height } after successful load.
+// Persists across re-renders and re-mounts so images don't cause repeated layout shifts.
+const imageDimensionCache = new Map<string, { width: number; height: number }>();
+
+/**
+ * Stable image component for use inside Virtuoso + ReactMarkdown.
+ * - Reserves a fixed placeholder height before load to prevent layout shifts.
+ * - Caches natural dimensions after first load so re-mounts don't cause flicker.
+ * - Uses loading="lazy" for images outside the viewport.
+ * - Hides on error to avoid broken-image icons.
+ */
+const MarkdownImage = React.memo(({ src, alt, style: _style, ...rest }: React.ImgHTMLAttributes<HTMLImageElement>) => {
+    const resolvedSrc = src || '';
+    const cached = imageDimensionCache.get(resolvedSrc);
+    const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(cached || null);
+    const [hasError, setHasError] = useState(false);
+    const [loaded, setLoaded] = useState(!!cached);
+
+    const handleLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+        const img = e.currentTarget;
+        const dims = { width: img.naturalWidth, height: img.naturalHeight };
+        imageDimensionCache.set(resolvedSrc, dims);
+        setDimensions(dims);
+        setLoaded(true);
+    }, [resolvedSrc]);
+
+    const handleError = useCallback(() => {
+        setHasError(true);
+    }, []);
+
+    if (hasError) return null;
+
+    // Calculate aspect-ratio-based height or use a static placeholder
+    const placeholderStyle: React.CSSProperties = dimensions
+        ? { aspectRatio: `${dimensions.width} / ${dimensions.height}`, width: '100%', maxWidth: `${dimensions.width}px` }
+        : { minHeight: '200px', width: '100%' };
+
+    return (
+        <img
+            {...rest}
+            src={resolvedSrc}
+            alt={alt || 'Generated Chart'}
+            loading="lazy"
+            onLoad={handleLoad}
+            onError={handleError}
+            className="rounded-lg shadow-md my-4 max-w-full h-auto border border-slate-200"
+            style={{
+                ...placeholderStyle,
+                backgroundColor: loaded ? undefined : '#f8fafc',
+                transition: 'opacity 0.2s ease-in',
+                opacity: loaded ? 1 : 0.6,
+            }}
+        />
+    );
+});
+
 export const TraceTab: React.FC<TraceTabProps> = ({
     chunks,
     completedTasks,
@@ -46,6 +102,29 @@ export const TraceTab: React.FC<TraceTabProps> = ({
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [showScrollBottom, setShowScrollBottom] = useState(false);
     const virtuosoRef = React.useRef<any>(null);
+
+    // Debounce atBottomStateChange to prevent rapid state updates during image load cascades
+    const atBottomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
+        if (atBottomTimerRef.current) clearTimeout(atBottomTimerRef.current);
+        atBottomTimerRef.current = setTimeout(() => {
+            setShowScrollBottom(!atBottom);
+        }, 150);
+    }, []);
+
+    // Build stable markdown components object with the current threadId baked in.
+    // Memoised so ReactMarkdown doesn't get a new `components` prop on every render,
+    // which would unmount & remount all <img> elements and retrigger network requests.
+    const markdownComponents = useMemo(() => ({
+        img: ({ node, ...props }: any) => {
+            let resolvedSrc = props.src;
+            if (resolvedSrc && !resolvedSrc.startsWith('http') && !resolvedSrc.startsWith('data:') && currentThreadId) {
+                const cleanedSrc = resolvedSrc.replace(/^(\.\/)?\/?(outputs\/)?/, '');
+                resolvedSrc = `${API_BASE_URL}/files/raw?thread_id=${currentThreadId}&file_path=${cleanedSrc}`;
+            }
+            return <MarkdownImage {...props} src={resolvedSrc} />;
+        },
+    }), [currentThreadId]);
 
     const handleCopy = (text: string, id: string) => {
         navigator.clipboard.writeText(text);
@@ -322,13 +401,10 @@ export const TraceTab: React.FC<TraceTabProps> = ({
                         style={{ height: '100%' }}
                         totalCount={chunks.length}
                         initialTopMostItemIndex={chunks.length > 0 ? chunks.length - 1 : 0}
-                        followOutput="auto"
+                        followOutput={isProcessing ? "auto" : false}
                         data={chunks}
                         atBottomThreshold={200}
-                        atBottomStateChange={(atBottom) => {
-                            console.log('[TraceTab] atBottomStateChange:', atBottom);
-                            setShowScrollBottom(!atBottom);
-                        }}
+                        atBottomStateChange={handleAtBottomStateChange}
                         components={{
                             Header: () => (
                                 <>
@@ -420,6 +496,56 @@ export const TraceTab: React.FC<TraceTabProps> = ({
                                                     )}
                                                 </div>
                                                 <pre className="text-xs text-red-600 whitespace-pre-wrap max-h-[200px] overflow-y-auto bg-white/50 p-2 rounded-lg border border-red-100/50">{chunk.error || chunk.detail}</pre>
+                                            </div>
+                                        </div>
+                                    ) : chunk.report_html_url ? (
+                                        /* ── HTML Report ready card ── */
+                                        <div className="flex gap-2 w-full mb-3">
+                                            <div className="shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mt-0.5 shadow-sm">
+                                                <FileText className="w-3 h-3 text-white" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                    <h3 className="font-semibold text-[11px] text-emerald-700">{info.title}</h3>
+                                                    {chunk.created_at && (
+                                                        <span className="text-[10px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded">
+                                                            {formatTime(chunk.created_at)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <a
+                                                    href={`${API_BASE_URL}/files/raw?thread_id=${currentThreadId}&file_path=${chunk.report_html_url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="group/report block rounded-xl overflow-hidden border border-emerald-200 hover:border-emerald-400 transition-all duration-200 hover:shadow-lg hover:shadow-emerald-100/50 cursor-pointer"
+                                                >
+                                                    <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 p-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-md shadow-emerald-200/50 group-hover/report:scale-110 transition-transform duration-200">
+                                                                <FileText className="w-6 h-6 text-white" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <h4 className="font-bold text-emerald-800 text-sm">{t('trace.htmlReportReady')}</h4>
+                                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                                                                        HTML
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs text-emerald-600/80 mt-0.5">{t('trace.htmlReportDesc')}</p>
+                                                            </div>
+                                                            <div className="shrink-0 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center border border-emerald-200 group-hover/report:bg-emerald-500 group-hover/report:border-emerald-500 transition-all duration-200">
+                                                                <ExternalLink className="w-4 h-4 text-emerald-500 group-hover/report:text-white transition-colors" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="bg-white px-4 py-2 border-t border-emerald-100 flex items-center justify-between">
+                                                        <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-1.5">
+                                                            <ExternalLink className="w-3 h-3" />
+                                                            {t('trace.openHtmlReport')}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-400">report.html</span>
+                                                    </div>
+                                                </a>
                                             </div>
                                         </div>
                                     ) : isActiveWaiting ? (
@@ -544,21 +670,7 @@ export const TraceTab: React.FC<TraceTabProps> = ({
                                                                     <div className="prose prose-slate prose-sm max-w-none markdown-content">
                                                                         <ReactMarkdown
                                                                             remarkPlugins={[remarkGfm]}
-                                                                            components={{
-                                                                                img: ({ node, ...props }) => {
-                                                                                    const src = props.src;
-                                                                                    const style = { minHeight: '100px', backgroundColor: '#f8fafc', ...props.style };
-                                                                                    const handleError = (e: any) => {
-                                                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                                                    };
-                                                                                    if (src && !src.startsWith('http') && !src.startsWith('data:') && currentThreadId) {
-                                                                                        const cleanedSrc = src.replace(/^(\.\/)?\/?(outputs\/)?/, '');
-                                                                                        const fullUrl = `${API_BASE_URL}/files/raw?thread_id=${currentThreadId}&file_path=${cleanedSrc}`;
-                                                                                        return <img {...props} src={fullUrl} style={style} onError={handleError} className="rounded-lg shadow-md my-4 max-w-full h-auto border border-slate-200" alt={props.alt || 'Generated Chart'} />;
-                                                                                    }
-                                                                                    return <img {...props} style={style} onError={handleError} className="rounded-lg shadow-md my-4 max-w-full h-auto" />;
-                                                                                }
-                                                                            }}
+                                                                            components={markdownComponents}
                                                                         >
                                                                             {chunk.action_executed[1]}
                                                                         </ReactMarkdown>
@@ -716,21 +828,7 @@ export const TraceTab: React.FC<TraceTabProps> = ({
                                                             <div className="prose prose-slate prose-sm max-w-none text-sm leading-relaxed break-words markdown-content">
                                                                 <ReactMarkdown
                                                                     remarkPlugins={[remarkGfm]}
-                                                                    components={{
-                                                                        img: ({ node, ...props }) => {
-                                                                            const src = props.src;
-                                                                            const style = { minHeight: '100px', backgroundColor: '#f8fafc', ...props.style };
-                                                                            const handleError = (e: any) => {
-                                                                                (e.target as HTMLImageElement).style.display = 'none';
-                                                                            };
-                                                                            if (src && !src.startsWith('http') && !src.startsWith('data:') && currentThreadId) {
-                                                                                const cleanedSrc = src.replace(/^(\.\/)?\/?(outputs\/)?/, '');
-                                                                                const fullUrl = `${API_BASE_URL}/files/raw?thread_id=${currentThreadId}&file_path=${cleanedSrc}`;
-                                                                                return <img {...props} src={fullUrl} style={style} onError={handleError} className="rounded-lg shadow-md my-4 max-w-full h-auto border border-slate-200" alt={props.alt || 'Generated Chart'} />;
-                                                                            }
-                                                                            return <img {...props} style={style} onError={handleError} className="rounded-lg shadow-md my-4 max-w-full h-auto" />;
-                                                                        }
-                                                                    }}
+                                                                    components={markdownComponents}
                                                                 >
                                                                     {chunk.final_response}
                                                                 </ReactMarkdown>
