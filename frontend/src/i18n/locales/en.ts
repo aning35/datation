@@ -29,7 +29,7 @@ export const en = {
     breakdown: 'Breakdown by Agent',
   },
   chat: {
-    placeholder: 'Send a message to the data analyst... (Shift+Enter for new line, or drag files to upload)',
+    placeholder: 'Send a message to the data analyst... (Type / for commands, @ to mention, or drag files)',
     placeholderProcessing: 'Analyzing... Press stop button to end',
     placeholderDrag: '',
     send: 'Send',

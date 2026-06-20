@@ -48,6 +48,13 @@ def load_port_config():
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Start Datation Application")
+    parser.add_argument("--prod", action="store_true", help="Start in production mode (build frontend and serve from backend)")
+    args = parser.parse_args()
+
+    is_prod = args.prod
+
     if not os.path.exists("datation/main.py") or not os.path.exists("frontend/package.json"):
         print("Please run this script from the root of the datation project.")
         sys.exit(1)
@@ -62,8 +69,11 @@ def main():
         sys.exit(1)
 
     api_port, web_port = load_port_config()
-    print(f"=== Starting Datation Application ===")
-    print(f"[Config] Backend port: {api_port} | Frontend port: {web_port}")
+    print(f"=== Starting Datation Application {'(Production Mode)' if is_prod else '(Development Mode)'} ===")
+    if is_prod:
+        print(f"[Config] Backend & Frontend port: {api_port}")
+    else:
+        print(f"[Config] Backend port: {api_port} | Frontend port: {web_port}")
 
     # 1. Install Python dependencies
     print("[1/4] Installing Python dependencies (uv sync)...")
@@ -80,6 +90,13 @@ def main():
     if result.returncode != 0:
         print("[ERROR] Failed to install frontend dependencies.")
         sys.exit(1)
+
+    if is_prod:
+        print("[2.5/4] Building frontend static assets (npm run build)...")
+        result = subprocess.run([npm_cmd, "run", "build"], cwd="frontend", capture_output=False)
+        if result.returncode != 0:
+            print("[ERROR] Failed to build frontend assets.")
+            sys.exit(1)
 
     # 3. Start the python backend
     print("[3/4] Starting Python backend (uv run)...")
@@ -109,7 +126,30 @@ def main():
         except Exception:
             pass
 
-    # 4. Start the Vite server
+    if is_prod:
+        print(f"\n=== Datation is running (Production Mode) ===")
+        print(f"Web UI / Backend: http://localhost:{api_port}")
+        print()
+        try:
+            while True:
+                time.sleep(1)
+                if backend_proc.poll() is not None:
+                    print("Backend process terminated.")
+                    break
+        except KeyboardInterrupt:
+            print("\nKeyboardInterrupt received. Shutting down...")
+        finally:
+            if backend_proc.poll() is None:
+                print("Terminating backend process...")
+                backend_proc.terminate()
+                try:
+                    backend_proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    backend_proc.kill()
+            print("=== Datation Terminated ===")
+        return
+
+    # 4. Start the Vite server (Dev Mode only)
     print(f"[4/4] Starting Vite (npm run dev, port {web_port})...")
     vite_cmd = [npm_cmd, "run", "dev"]
 

@@ -125,14 +125,23 @@
 
 @layer utilities {
     .border-l-violet-500 {}
+
     .bg-violet-900\/20 {}
+
     .border-l-green-500 {}
+
     .bg-green-900\/20 {}
+
     .border-l-sky-500 {}
+
     .bg-sky-900\/20 {}
+
     .border-l-teal-500 {}
+
     .bg-teal-900\/20 {}
+
     .border-l-slate-500 {}
+
     .bg-slate-800\/40 {}
 
     /* FORCE DARK THEME FOR LOG PANEL */
@@ -361,6 +370,16 @@
         background: rgba(243, 139, 168, 0.12);
     }
 
+    /* Fix visual overlap for active items by blurring the text underneath */
+    .sidebar-history-item.active .sidebar-action-delete {
+        background: rgba(243, 139, 168, 0.15);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .sidebar-history-item.active .sidebar-action-delete:hover {
+        background: rgba(243, 139, 168, 0.25);
+    }
+
     .sidebar-history-delete.confirming {
         display: flex;
         align-items: center;
@@ -371,6 +390,27 @@
         background: rgba(243, 139, 168, 0.15);
         border: none;
         cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .sidebar-history-delete.confirming:hover {
+        background: rgba(243, 139, 168, 0.25);
+    }
+
+    .sidebar-action-cancel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px;
+        border-radius: 6px;
+        color: #a6adc8;
+        background: rgba(166, 173, 200, 0.1);
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .sidebar-action-cancel:hover {
+        color: #bac2de;
+        background: rgba(166, 173, 200, 0.2);
     }
 
     .sidebar-status-badge {
@@ -519,7 +559,9 @@
         box-sizing: border-box;
     }
 
-    html, body, #root {
+    html,
+    body,
+    #root {
         width: 100%;
         height: 100%;
         margin: 0;

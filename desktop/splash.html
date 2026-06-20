@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Datation Setup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+
+  .splash-card {
+    width: 480px;
+    padding: 40px 40px 32px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 24px;
+    box-shadow:
+      0 24px 80px rgba(0, 0, 0, 0.12),
+      0 8px 24px rgba(0, 0, 0, 0.08),
+      0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: height 0.3s ease;
+  }
+
+  .splash-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b);
+    background-size: 300% 100%;
+    animation: gradient-shift 3s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .logo {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.3);
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #1e40af, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+    text-align: center;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 24px;
+    font-weight: 500;
+    text-align: center;
+  }
+
+  .phase-container {
+    width: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .phase-container.active {
+    display: flex;
+  }
+
+  .spinner-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .spinner {
+    width: 18px;
+    height: 18px;
+    border: 2.5px solid #e2e8f0;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .status-text {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 500;
+    text-align: center;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    -webkit-app-region: no-drag;
+  }
+
+  /* Setup UI specific styles */
+  .setup-panel {
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    text-align: left;
+    -webkit-app-region: no-drag;
+  }
+
+  .env-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .env-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .env-icon {
+    font-size: 16px;
+    margin-top: 2px;
+  }
+
+  .env-details {
+    flex: 1;
+  }
+
+  .env-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 2px;
+  }
+
+  .env-desc {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.4;
+  }
+
+  .env-path {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 2px;
+    word-break: break-all;
+  }
+
+  .options-group {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .options-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 8px;
+  }
+
+  .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #334155;
+    cursor: pointer;
+    margin-bottom: 6px;
+  }
+
+  .radio-label input {
+    cursor: pointer;
+  }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    -webkit-app-region: no-drag;
+  }
+
+  button {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    outline: none;
+  }
+
+  .btn-primary {
+    background: #4f46e5;
+    color: white;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+  }
+  .btn-primary:hover {
+    background: #4338ca;
+  }
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+  }
+  .btn-secondary:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .version {
+    font-size: 10px;
+    color: #cbd5e1;
+    margin-top: 20px;
+    font-weight: 500;
+  }
+
+  .browse-link {
+    font-size: 11px;
+    color: #4f46e5;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 8px;
+    font-weight: 500;
+    pointer-events: auto;
+  }
+  .browse-link:hover {
+    color: #4338ca;
+  }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark) {
+    .splash-card {
+      background: rgba(30, 41, 59, 0.95);
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.4),
+        0 8px 24px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    }
+    h1 {
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .subtitle { color: #64748b; }
+    .status-text { color: #cbd5e1; }
+    .spinner { border-color: #334155; border-top-color: #818cf8; }
+    .version { color: #475569; }
+    
+    .setup-panel {
+      background: #0f172a;
+      border-color: #334155;
+    }
+    .env-name { color: #f1f5f9; }
+    .env-desc { color: #94a3b8; }
+    .env-path { color: #64748b; }
+    .options-group { border-color: #334155; }
+    .options-title { color: #94a3b8; }
+    .radio-label { color: #cbd5e1; }
+    
+    .btn-secondary {
+      background: #1e293b;
+      color: #94a3b8;
+    }
+    .btn-secondary:hover {
+      background: #334155;
+      color: #f1f5f9;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="splash-card">
+    <div class="logo">
+      <img src="resources/icon.png" alt="Datation Logo" style="width: 100%; height: 100%; object-fit: contain;">
+    </div>
+    <h1>Datation</h1>
+    <p class="subtitle">AI-Powered Data Analysis Platform</p>
+
+    <!-- Phase 1: Detecting -->
+    <div id="phase-detect" class="phase-container active">
+      <div class="spinner-container">
+        <div class="spinner"></div>
+        <span class="status-text">Detecting runtime environment...</span>
+      </div>
+    </div>
+
+    <!-- Phase 2: Setup Required -->
+    <div id="phase-setup" class="phase-container">
+      <div class="setup-panel">
+        <div class="env-item" id="env-py">
+          <div class="env-icon" id="icon-py">⏳</div>
+          <div class="env-details">
+            <div class="env-name">Python 3.12+</div>
+            <div class="env-desc" id="desc-py">Checking...</div>
+            <div class="env-path" id="path-py"></div>
+          </div>
+        </div>
+        <div class="env-item" id="env-uv">
+          <div class="env-icon" id="icon-uv">⏳</div>
+          <div class="env-details">
+            <div class="env-name">
+              uv (Python Package Manager)
+              <span id="browse-uv" class="browse-link" style="display: none;" onclick="handleBrowseUv()">[Browse/选择本地]</span>
+            </div>
+            <div class="env-desc" id="desc-uv">Checking...</div>
+            <div class="env-path" id="path-uv"></div>
+          </div>
+        </div>
+        
+        <div class="options-group">
+          <div class="options-title">Installation Source (安装源)</div>
+          <label class="radio-label">
+            <input type="radio" name="mirror" value="china" checked>
+            China Mirror (国内镜像源 - 推荐)
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="mirror" value="official">
+            Official Source (官方源)
+          </label>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-secondary" onclick="window.datation.skipSetup()">Skip / 跳过</button>
+        <button class="btn-primary" onclick="startInstall()">Install / 一键安装</button>
+      </div>
+    </div>
+
+    <!-- Phase 3: Installing / Starting -->
+    <div id="phase-install" class="phase-container">
+      <div class="spinner-container">
+        <div class="spinner"></div>
+        <span class="status-text" id="install-status">Starting...</span>
+      </div>
+      <div class="actions" style="margin-top: 16px;">
+        <button class="btn-secondary" onclick="window.datation.cancelInstall()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Phase 4: Ready -->
+    <div id="phase-ready" class="phase-container">
+      <div class="spinner-container">
+        <div class="spinner"></div>
+        <span class="status-text">Starting Backend Services...</span>
+      </div>
+    </div>
+
+    <p class="version" id="version-text">v0.1.0</p>
+  </div>
+
+  <script>
+    if (window.datation) {
+      document.getElementById('version-text').textContent = 'v' + window.datation.version;
+
+      // Handle environment status from main process
+      window.datation.onEnvStatus((status) => {
+        const { uv, python, needsSetup } = status;
+        
+        // Update UI
+        const setEnvUI = (id, data) => {
+          let isOk = data.found;
+          if (id === 'py' && data.found) {
+            // Very simple version check
+            const vMatch = data.version.match(/(\d+)\.(\d+)/);
+            if (vMatch && (parseInt(vMatch[1]) < 3 || (parseInt(vMatch[1]) === 3 && parseInt(vMatch[2]) < 12))) {
+              isOk = false;
+            }
+          }
+          
+          document.getElementById(`icon-${id}`).textContent = isOk ? '✅' : '❌';
+          
+          if (data.found) {
+            document.getElementById(`desc-${id}`).textContent = `Version: ${data.version}${!isOk ? ' (Too old)' : ''}`;
+          } else {
+            document.getElementById(`desc-${id}`).textContent = 'Not found (Will be installed automatically)';
+          }
+          
+          document.getElementById(`path-${id}`).textContent = data.path || '';
+
+          // Show browse button if uv not found
+          if (id === 'uv') {
+            document.getElementById('browse-uv').style.display = data.found ? 'none' : 'inline';
+          }
+        };
+
+        setEnvUI('uv', uv);
+        setEnvUI('py', python);
+
+        if (needsSetup) {
+          // uv is missing — show interactive setup page
+          showPhase('phase-setup');
+        } else {
+          // uv found — auto-sync or fast path, just show the loading spinner
+          showPhase('phase-ready');
+        }
+      });
+
+      // Handle installation progress
+      window.datation.onInstallProgress((progress) => {
+        showPhase('phase-install');
+        document.getElementById('install-status').textContent = progress.message;
+      });
+
+      // Legacy fallback
+      window.datation.onSplashStatus((message) => {
+        // If we're in ready phase, just update the text. If we haven't seen status, assume we're installing/starting.
+        if (document.getElementById('phase-ready').classList.contains('active')) {
+          document.querySelector('#phase-ready .status-text').textContent = message;
+        } else {
+          showPhase('phase-install');
+          document.getElementById('install-status').textContent = message;
+        }
+      });
+    }
+
+    function showPhase(phaseId) {
+      document.querySelectorAll('.phase-container').forEach(el => el.classList.remove('active'));
+      document.getElementById(phaseId).classList.add('active');
+    }
+
+    function startInstall() {
+      const mirror = document.querySelector('input[name="mirror"]:checked').value;
+      window.datation.startInstall({ mirror });
+      showPhase('phase-install');
+    }
+
+    async function handleBrowseUv() {
+      const newPath = await window.datation.selectUvPath();
+      if (newPath) {
+        // Show detecting again while backend re-evaluates
+        showPhase('phase-detect');
+      }
+    }
+  </script>
+</body>
+</html>

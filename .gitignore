@@ -61,3 +61,8 @@ Thumbs.db
 *.log
 datation.db
 datation.sqlite
+
+# Electron Desktop
+/desktop/node_modules/
+/desktop/release/
+/desktop/dist/

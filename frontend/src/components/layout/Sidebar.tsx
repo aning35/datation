@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   Plus, Settings, ChevronLeft, MessageSquare,
-  Trash2, Loader2, Clock, CheckCircle2, PauseCircle, MessageCircle, PanelLeftOpen, Search
+  Trash2, Loader2, Clock, CheckCircle2, PauseCircle, MessageCircle, PanelLeftOpen, Search,
+  X, Check
 } from 'lucide-react';
 import { useTranslation } from '../../i18n/useTranslation';
 
@@ -159,6 +160,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [confirmDeleteId, onDeleteHistory]);
 
+  const handleCancelDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmDeleteId(null);
+  }, []);
+
   const grouped = useMemo(() => groupByDate(historyList, {
     today: t('sidebar.today'),
     yesterday: t('sidebar.yesterday'),
@@ -286,15 +292,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {/* Shared slot: show status normally, show delete on hover */}
                     <div className="sidebar-action-slot">
                       {isConfirming ? (
-                        <button
-                          className="sidebar-history-delete confirming"
-                          onClick={(e) => handleDelete(item.thread_id, e)}
-                          title={t('sidebar.delete')}
-                        >
-                          {isDeleting
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Trash2 className="w-3.5 h-3.5" />}
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            className="sidebar-action-cancel"
+                            onClick={handleCancelDelete}
+                            title={t('common.cancel') || '取消'}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            className="sidebar-history-delete confirming"
+                            onClick={(e) => handleDelete(item.thread_id, e)}
+                            title={t('common.confirm') || '确认'}
+                          >
+                            {isDeleting
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              : <Check className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       ) : (
                         <>
                           <button

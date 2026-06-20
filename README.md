@@ -58,6 +58,16 @@ Datation provides a highly responsive, feature-rich Web workspace with seamless 
 * **Conversation Rollback**: Roll back the conversation thread to any previous turn seamlessly, automatically resetting LangGraph states, stream logs (with backups), and supervisor routing.
 * **Workspace Search (⌘K)**: Global command and conversation search bar.
 * **Live Token Tracker & Log Streaming**: Visual per-agent token breakdown (input, completion, reasoning) and real-time backend trace streams.
+* **Slash Commands & Mentions**: Type `/` for slash commands or `@` for context mentions directly in the chat input, with an inline hint strip to guide new users.
+
+#### 💻 7. Cross-Platform Desktop App (Electron)
+* **Smart Environment Detection**: On launch, the app automatically detects `uv` and `Python` from the system PATH (including Homebrew, Miniconda, Anaconda, Cargo, etc.).
+* **Interactive Setup Wizard**: If dependencies are missing, a polished setup page appears with:
+  * Real-time check results (✅/❌) for each dependency.
+  * Installation source selector: **China Mirror (国内镜像)** or **Official Source**.
+  * One-click install or manual path selection via the `[Browse/选择本地]` button.
+* **Zero-Friction Fast Path**: If all dependencies are already installed, the app skips setup entirely and launches the backend instantly.
+* **Persistent Configuration**: User-selected custom paths are saved to `datation-env.json` and reused across sessions automatically.
 
 ---
 
@@ -122,6 +132,11 @@ datation/
 │   ├── memory/              # Dual memory system (Preferences & Session Experience)
 │   ├── shell_executor/      # Controlled command line runner
 │   └── web_search/          # Search provider integrations
+├── desktop/                 # Electron desktop application
+│   ├── main.js              # Main process (env detection, backend lifecycle, IPC)
+│   ├── preload.js           # Secure context bridge for splash & main window
+│   ├── splash.html          # Multi-phase setup wizard (detect → setup → install → ready)
+│   └── resources/           # App icons (icns, ico, png)
 ├── tests/                   # Automated unit & integration tests
 ├── start.sh                 # One-click startup script (macOS/Linux)
 ├── start.bat                # One-click startup script (Windows)
@@ -134,7 +149,13 @@ datation/
 
 ### 🛠️ Quick Start
 
-#### 1. Prerequisites
+#### 0. Download Desktop App (Easiest)
+For the best out-of-the-box experience, we recommend downloading the pre-compiled **Datation Desktop App** (Windows `.exe`, macOS `.dmg`, Linux `.AppImage`).
+👉 **[Download the latest release here](https://github.com/aning35/datation/releases/latest)**
+
+The desktop app will automatically bootstrap the Python sandbox environment and install all necessary dependencies for you.
+
+#### 1. Prerequisites (For Source/Developer Setup)
 Ensure you have `Python 3.12+` and `Node.js 20+` installed.
 
 We strongly recommend [uv](https://github.com/astral-sh/uv) to manage Python packages:

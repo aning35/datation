@@ -17,10 +17,6 @@ router = APIRouter()
 def health_check():
     return {"status": "healthy", "ready": state.app_ready}
 
-@router.get("/")
-def read_root():
-    return {"status": "ok", "message": "Datation Agent is running with asynchronous bindings."}
-
 @router.post("/restart")
 async def restart_backend():
     """

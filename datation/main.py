@@ -189,6 +189,40 @@ app.add_middleware(
 
 app.include_router(api_router)
 
+# ---------------------------------------------------------------------------
+# Static frontend serving (production / desktop mode)
+# When the frontend has been pre-built via `cd frontend && npm run build`,
+# FastAPI serves the static files directly — no Vite dev server needed.
+# In development mode (dist/ doesn't exist), this block is a no-op and the
+# developer continues to use `npm run dev` as before.
+# ---------------------------------------------------------------------------
+_frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+if os.path.isdir(_frontend_dist):
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    # Serve static assets (JS/CSS/images) under /assets, /favicon.ico, etc.
+    app.mount("/assets", StaticFiles(directory=os.path.join(_frontend_dist, "assets")), name="frontend-assets")
+
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def _favicon():
+        fav = os.path.join(_frontend_dist, "favicon.ico")
+        if os.path.exists(fav):
+            return FileResponse(fav)
+        return FileResponse(os.path.join(_frontend_dist, "index.html"))
+
+    # SPA catch-all: any non-API GET request returns index.html so that
+    # client-side routing (React Router, etc.) works correctly.
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def _spa_fallback(full_path: str):
+        # If the exact file exists in dist/, serve it (e.g. robots.txt)
+        candidate = os.path.join(_frontend_dist, full_path)
+        if full_path and os.path.isfile(candidate):
+            return FileResponse(candidate)
+        return FileResponse(os.path.join(_frontend_dist, "index.html"))
+
+    print(f"[Init] 📦 Serving pre-built frontend from {_frontend_dist}")
+
 def main():
     uvicorn.run("datation.main:app", host=API_HOST, port=API_PORT, reload=False)
 

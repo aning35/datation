@@ -245,7 +245,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, a
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-800 leading-tight">{t('settings.title')}</h2>
-              <p className="text-xs text-slate-500 mt-0.5">{t('settings.subtitle')}</p>
+              <p className="text-xs text-slate-500 mt-0.5" title={t('settings.subtitle')}>{t('settings.subtitle')}</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition-colors">
@@ -436,13 +436,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, a
                           <input
                             type="number" value={config.api_port}
                             onChange={e => handleChange('api_port', parseInt(e.target.value) || 18321)}
-                            className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800"
-                          />
-                        </Field>
-                        <Field label={t('settings.server.webPort') || 'Web Port'}>
-                          <input
-                            type="number" value={config.web_port}
-                            onChange={e => handleChange('web_port', parseInt(e.target.value) || 1420)}
                             className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm text-slate-800"
                           />
                         </Field>
@@ -712,7 +705,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, a
                       )
                     )}
                     {!skillsScanned && !skillsScanning && (
-                          <div className="flex flex-col items-center justify-center py-12 text-slate-300 gap-2">
+                      <div className="flex flex-col items-center justify-center py-12 text-slate-300 gap-2">
                         <Zap className="w-10 h-10" />
                         <p className="text-sm text-slate-400">{t('settings.skills.clickToDiscover')}</p>
                       </div>
@@ -734,7 +727,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, a
                       <div className="mt-4 flex flex-col items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-xl px-5 py-2.5 w-full max-w-sm">
                         <div className="flex items-center justify-between w-full border-b border-slate-200/50 pb-1.5">
                           <span className="text-[11px] font-semibold text-slate-500">{t('settings.about.version')}</span>
-                          <span className="text-[10px] font-mono font-bold text-slate-800 bg-blue-100/60 px-2 py-0.5 rounded text-blue-700">v1.0.0</span>
+                          <span className="text-[10px] font-mono font-bold text-slate-800 bg-blue-100/60 px-2 py-0.5 rounded text-blue-700">v0.1.0</span>
                         </div>
                         <div className="flex items-center justify-between w-full pt-1.5">
                           <span className="text-[11px] font-semibold text-slate-500">GitHub</span>

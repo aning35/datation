@@ -4,7 +4,19 @@
 
 set -e
 
-echo "🚀 启动 Datation..."
+# 解析参数
+MODE="dev"
+for arg in "$@"; do
+    if [ "$arg" == "--prod" ]; then
+        MODE="prod"
+    fi
+done
+
+if [ "$MODE" == "prod" ]; then
+    echo "🚀 启动 Datation (Production Mode)..."
+else
+    echo "🚀 启动 Datation (Development Mode)..."
+fi
 
 # 检查依赖
 if ! command -v uv &> /dev/null; then
@@ -34,7 +46,12 @@ if [ -f "$APP_CONFIG" ]; then
 fi
 API_PORT="${CFG_API_PORT:-${API_PORT:-18321}}"
 WEB_PORT="${CFG_WEB_PORT:-${WEB_PORT:-1420}}"
-echo "📋 后端端口: $API_PORT | 前端端口: $WEB_PORT"
+
+if [ "$MODE" == "prod" ]; then
+    echo "📋 服务端口: $API_PORT"
+else
+    echo "📋 后端端口: $API_PORT | 前端端口: $WEB_PORT"
+fi
 
 # 安装 Python 依赖
 echo "📦 安装 Python 依赖..."
@@ -43,6 +60,11 @@ uv sync
 # 安装前端依赖
 echo "📦 安装前端依赖..."
 cd frontend && npm install && cd ..
+
+if [ "$MODE" == "prod" ]; then
+    echo "🏗️  构建前端静态资源..."
+    cd frontend && npm run build && cd ..
+fi
 
 # 清理旧进程
 pkill -f "datation.main" 2>/dev/null || true
@@ -67,7 +89,28 @@ for i in {1..60}; do
     sleep 2
 done
 
-# 启动 Vite
+# 如果是生产模式，就不启动 Vite，直接挂起等待后端
+if [ "$MODE" == "prod" ]; then
+    echo ""
+    echo "✅ Datation Web 版已启动 (Production Mode): http://localhost:${API_PORT}"
+    echo ""
+    echo "按 Ctrl+C 停止服务"
+    
+    cleanup_prod() {
+        echo ""
+        echo "🛑 停止后端服务..."
+        kill $BACKEND_PID 2>/dev/null || true
+        pkill -P $$ 2>/dev/null || true
+        exit 0
+    }
+    trap cleanup_prod INT TERM
+    wait $BACKEND_PID 2>/dev/null
+    cleanup_prod
+fi
+
+# ==============================================================
+# 开发模式专属：启动 Vite
+# ==============================================================
 echo "🎨 启动 Web 前端服务..."
 cd frontend
 VITE_PORT=$WEB_PORT npm run dev > /tmp/datation-vite.log 2>&1 &

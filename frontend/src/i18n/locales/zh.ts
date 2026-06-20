@@ -29,7 +29,7 @@ export const zh = {
     breakdown: '按智能体分组',
   },
   chat: {
-    placeholder: '给数据分析专家发送消息... (Shift+Enter 换行，或拖放文件上传)',
+    placeholder: '给数据分析专家发送消息... (输入 / 使用命令，输入 @ 提及，或拖放文件)',
     placeholderProcessing: '正在分析中... 按停止按钮结束',
     placeholderDrag: '',
     send: '发送',

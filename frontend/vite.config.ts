@@ -39,8 +39,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      // 将根目录提取到的后端地址强制注入给前端
-      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(apiBaseUrl)
+      // In production (vite build), frontend is served by FastAPI on the same
+      // origin, so API calls should use relative URLs (empty base).
+      // In development, resolve to the computed backend address.
+      'import.meta.env.VITE_API_BASE_URL': mode === 'production'
+        ? JSON.stringify('')
+        : JSON.stringify(apiBaseUrl)
     },
     clearScreen: false,
     server: {

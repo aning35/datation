@@ -1,0 +1,145 @@
+{
+  "name": "datation-desktop",
+  "version": "0.1.0",
+  "description": "Datation - AI-Powered Data Analysis Platform",
+  "main": "main.js",
+  "author": "aning35",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:frontend": "cd ../frontend && npm ci && npm run build",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl",
+    "dist": "npm run build:frontend && electron-builder"
+  },
+  "dependencies": {
+    "electron-log": "^5.3.0"
+  },
+  "devDependencies": {
+    "electron": "^42.4.1",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.datation.desktop",
+    "productName": "Datation",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "splash.html",
+      "resources/icon.png"
+    ],
+    "extraResources": [
+      {
+        "from": "../datation",
+        "to": "backend/datation",
+        "filter": [
+          "**/*",
+          "!__pycache__/**",
+          "!**/*.pyc"
+        ]
+      },
+      {
+        "from": "../tools",
+        "to": "backend/tools",
+        "filter": [
+          "**/*",
+          "!__pycache__/**",
+          "!**/*.pyc"
+        ]
+      },
+      {
+        "from": "../skills",
+        "to": "backend/skills",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "../scripts",
+        "to": "backend/scripts",
+        "filter": [
+          "**/*",
+          "!__pycache__/**"
+        ]
+      },
+      {
+        "from": "../pyproject.toml",
+        "to": "backend/pyproject.toml"
+      },
+      {
+        "from": "../.python-version",
+        "to": "backend/.python-version"
+      },
+      {
+        "from": "../frontend/dist",
+        "to": "backend/frontend/dist",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "resources/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "icon": "resources/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "resources/icon.ico",
+      "uninstallerIcon": "resources/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "linux": {
+      "icon": "resources/icon.png",
+      "category": "Utility",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    }
+  }
+}

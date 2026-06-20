@@ -3,7 +3,16 @@ setlocal enabledelayedexpansion
 REM Datation 启动脚本 (Windows)
 REM 端口优先级: app.json > 环境变量(.env) > 默认值
 
-echo === Starting Datation ===
+set MODE=dev
+for %%x in (%*) do (
+    if "%%x"=="--prod" set MODE=prod
+)
+
+if "%MODE%"=="prod" (
+    echo === Starting Datation ^(Production Mode^) ===
+) else (
+    echo === Starting Datation ^(Development Mode^) ===
+)
 
 REM 检查 uv
 where uv >nul 2>&1
@@ -42,7 +51,12 @@ if exist "%APP_CONFIG%" (
         if not "%%v"=="" set "WEB_PORT=%%v"
     )
 )
-echo [Config] Backend port: !API_PORT! ^| Frontend port: !WEB_PORT!
+
+if "%MODE%"=="prod" (
+    echo [Config] Backend ^& Frontend port: !API_PORT!
+) else (
+    echo [Config] Backend port: !API_PORT! ^| Frontend port: !WEB_PORT!
+)
 
 REM 清理上一次残留的后端/前端进程
 echo [Cleanup] Stopping any existing Datation processes...
@@ -78,6 +92,17 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+
+if "%MODE%"=="prod" (
+    echo [2.5/4] Building frontend static assets...
+    call npm run build
+    if !errorlevel! neq 0 (
+        echo [ERROR] Failed to build frontend.
+        cd ..
+        pause
+        exit /b 1
+    )
+)
 cd ..
 
 REM 启动后端
@@ -102,7 +127,23 @@ for /l %%i in (1,1,60) do (
     )
 )
 
-REM 启动前端
+if "%MODE%"=="prod" (
+    echo.
+    echo === Datation is running ^(Production Mode^) ===
+    echo Web UI / Backend:  http://localhost:!API_PORT!
+    echo.
+    echo Press any key to stop the service...
+    pause >nul
+    echo Stopping backend service...
+    taskkill /f /fi "WINDOWTITLE eq datation-*" >nul 2>&1
+    for /f "tokens=5" %%p in ('netstat -aon ^| findstr ":!API_PORT!" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
+    echo === Datation Stopped ===
+    exit /b 0
+)
+
+REM ==========================================================
+REM 开发模式专属：启动前端 Vite
+REM ==========================================================
 echo [4/4] Starting Vite frontend...
 cd frontend
 start /b "" cmd /c "set VITE_PORT=!WEB_PORT! && npm run dev > %TEMP%\datation-vite.log 2>&1"
@@ -138,3 +179,4 @@ taskkill /f /fi "WINDOWTITLE eq datation-*" >nul 2>&1
 for /f "tokens=5" %%p in ('netstat -aon ^| findstr ":!API_PORT!" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
 for /f "tokens=5" %%p in ('netstat -aon ^| findstr ":!WEB_PORT!" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
 echo === Datation Stopped ===
+
