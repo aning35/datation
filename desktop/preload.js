@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('datation', {
   onSplashStatus: (callback) => {
     ipcRenderer.on('splash-status', (_event, message) => callback(message));
   },
+  /** Receive raw real-time logs */
+  onInstallLog: (callback) => {
+    ipcRenderer.on('install-log', (_event, message) => callback(message));
+  },
   /** Trigger environment installation with options */
   startInstall: (options) => {
     ipcRenderer.send('start-install', options);

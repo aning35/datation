@@ -89,7 +89,7 @@ log.transports.console.level = IS_DEV ? 'debug' : 'info';
 function createSplashWindow() {
   splashWindow = new BrowserWindow({
     width: 480,
-    height: 560,
+    height: 680,
     frame: false,
     resizable: false,
     transparent: true,
@@ -162,10 +162,10 @@ async function detectEnvironment() {
     } catch (e) {}
   }
 
-  // 3. Needs interactive setup only if uv is missing
-  result.needsSetup = !result.uv.found;
-  // Needs automatic sync if uv exists but venv is missing
-  result.needsSync = result.uv.found && !fs.existsSync(path.join(VENV_DIR, 'pyvenv.cfg'));
+  // 3. Needs interactive setup if uv is missing OR venv is not initialized
+  result.needsSetup = !result.uv.found || !fs.existsSync(path.join(VENV_DIR, 'pyvenv.cfg'));
+  // Needs automatic sync is no longer used since we always show the UI to pick mirrors
+  result.needsSync = false;
   
   return result;
 }
@@ -173,6 +173,12 @@ async function detectEnvironment() {
 function notifySplashProgress(message) {
   if (splashWindow && !splashWindow.isDestroyed()) {
     splashWindow.webContents.send('install-progress', { message });
+  }
+}
+
+function notifySplashLog(message) {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.webContents.send('install-log', message);
   }
 }
 
@@ -203,8 +209,16 @@ async function installUv() {
 
     activeInstallProcess = proc;
 
-    proc.stdout.on('data', (d) => log.info(`[uv-install] ${d}`));
-    proc.stderr.on('data', (d) => log.warn(`[uv-install] ${d}`));
+    proc.stdout.on('data', (d) => {
+      const msg = d.toString().trim();
+      log.info(`[uv-install] ${msg}`);
+      notifySplashLog(msg);
+    });
+    proc.stderr.on('data', (d) => {
+      const msg = d.toString().trim();
+      log.warn(`[uv-install] ${msg}`);
+      notifySplashLog(msg);
+    });
     
     proc.on('close', (code) => {
       activeInstallProcess = null;
@@ -228,7 +242,7 @@ async function installUv() {
 /** Use uv to create a venv and install all Python dependencies */
 async function installPythonDeps(options = {}) {
   log.info('[Setup] Installing Python dependencies...');
-  notifySplashProgress('Installing Python 3.12 and dependencies...\nThis may take a few minutes on first launch.');
+  notifySplashProgress('Setting up isolated Python environment & dependencies...\nThis may take a few minutes on first launch.');
 
   return new Promise((resolve, reject) => {
     const envVars = {
@@ -256,12 +270,17 @@ async function installPythonDeps(options = {}) {
     proc.stdout.on('data', (d) => {
       const line = d.toString().trim();
       log.info(`[uv-sync] ${line}`);
+      notifySplashLog(line);
       if (line.includes('Resolved') || line.includes('Installing') || line.includes('Installed')) {
         notifySplashProgress(`Installing dependencies...\n${line}`);
       }
     });
     
-    proc.stderr.on('data', (d) => log.warn(`[uv-sync] ${d}`));
+    proc.stderr.on('data', (d) => {
+      const line = d.toString().trim();
+      log.warn(`[uv-sync] ${line}`);
+      notifySplashLog(line);
+    });
     
     proc.on('close', (code) => {
       activeInstallProcess = null;
@@ -310,10 +329,14 @@ async function ensurePythonEnv() {
   }
 
   if (envStatus.needsSetup) {
-    // uv is missing — show interactive setup page and wait for user action
+    // uv or venv is missing — show interactive setup page and wait for user action
     return new Promise((resolve, reject) => {
       ipcMain.once('start-install', async (event, options) => {
         try {
+          // Save user's mirror preference for future background syncs
+          if (options && options.mirror) {
+            saveUserConfig('mirror', options.mirror);
+          }
           if (!envStatus.uv.found) {
             await installUv();
           }
@@ -337,15 +360,12 @@ async function ensurePythonEnv() {
         reject(new Error('User cancelled installation'));
       });
     });
-  } else if (envStatus.needsSync) {
-    // uv found but venv missing — auto-install dependencies without asking
-    log.info('[Setup] uv found, auto-syncing dependencies...');
-    await installPythonDeps({ mirror: 'china' });
-    log.info('[Setup] Python environment ready.');
   } else {
-    // Fast path: everything is ready
+    // Fast path: everything is ready (uv + venv both exist)
     log.info('[Setup] Environment ready. Starting fast path.');
-    installPythonDeps({ mirror: 'china' }).catch(e => log.warn("[Setup] Fast sync failed:", e));
+    // Optional: background sync to keep deps up-to-date, using saved mirror preference
+    const savedMirror = userConfig.mirror || 'official';
+    installPythonDeps({ mirror: savedMirror }).catch(e => log.warn("[Setup] Fast sync failed:", e));
   }
 }
 
@@ -372,12 +392,22 @@ function startBackend() {
       PYTHONPATH: path.join(BACKEND_DIR, 'datation') + (process.platform === 'win32' ? ';' : ':') + BACKEND_DIR,
       VIRTUAL_ENV: VENV_DIR,
       PATH: path.dirname(pythonBin) + (process.platform === 'win32' ? ';' : ':') + (process.env.PATH || ''),
+      PYTHONNOUSERSITE: '1',
+      SETUPTOOLS_USE_DISTUTILS: 'stdlib',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
-  backendProcess.stdout.on('data', (d) => log.info(`[Backend] ${d.toString().trimEnd()}`));
-  backendProcess.stderr.on('data', (d) => log.warn(`[Backend] ${d.toString().trimEnd()}`));
+  backendProcess.stdout.on('data', (d) => {
+    const msg = d.toString().trimEnd();
+    log.info(`[Backend] ${msg}`);
+    notifySplashLog(msg);
+  });
+  backendProcess.stderr.on('data', (d) => {
+    const msg = d.toString().trimEnd();
+    log.warn(`[Backend] ${msg}`);
+    notifySplashLog(msg);
+  });
 
   backendProcess.on('close', (code) => {
     log.info(`[Backend] Process exited with code ${code}`);
@@ -476,8 +506,16 @@ function createMainWindow() {
     mainWindow.show();
   });
 
-  // Open external links in the default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url === 'about:blank') {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          autoHideMenuBar: true,
+          title: 'Datation Print Preview'
+        }
+      };
+    }
     if (url.startsWith('http')) {
       shell.openExternal(url);
     }

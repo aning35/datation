@@ -3,8 +3,13 @@
   "version": "0.1.0",
   "description": "Datation - AI-Powered Data Analysis Platform",
   "main": "main.js",
-  "author": "aning35",
+  "author": "aning35 <aning35@github.com>",
   "license": "MIT",
+  "desktopName": "Datation",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aning35/datation.git"
+  },
   "scripts": {
     "start": "electron .",
     "build:frontend": "cd ../frontend && npm ci && npm run build",
