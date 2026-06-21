@@ -14,6 +14,7 @@ const util = require('util');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const net = require('net');
 const log = require('electron-log');
 const execFileAsync = util.promisify(execFile);
 
@@ -37,8 +38,25 @@ const PYTHON_HOME = path.join(USER_DATA, 'python-env');
 let UV_BIN = path.join(PYTHON_HOME, 'uv', process.platform === 'win32' ? 'uv.exe' : 'uv');
 const VENV_DIR = path.join(PYTHON_HOME, 'venv');
 
-const API_PORT = 18321;
-const API_URL = `http://127.0.0.1:${API_PORT}`;
+let API_PORT = 18321;
+let API_URL = `http://127.0.0.1:${API_PORT}`;
+
+async function findFreePort(startPort) {
+  let port = startPort;
+  while (true) {
+    const isFree = await new Promise((resolve) => {
+      const server = net.createServer();
+      server.unref();
+      server.on('error', () => resolve(false));
+      server.listen(port, '127.0.0.1', () => {
+        server.close(() => resolve(true));
+      });
+    });
+    if (isFree) return port;
+    log.info(`[Startup] Port ${port} is occupied, trying next port...`);
+    port++;
+  }
+}
 
 // Extend PATH for macOS/Linux GUI apps so they can find tools installed via brew, curl, cargo, etc.
 if (process.platform !== 'win32') {
@@ -363,9 +381,13 @@ async function ensurePythonEnv() {
   } else {
     // Fast path: everything is ready (uv + venv both exist)
     log.info('[Setup] Environment ready. Starting fast path.');
-    // Optional: background sync to keep deps up-to-date, using saved mirror preference
+    // Optional: sync to keep deps up-to-date before starting backend
     const savedMirror = userConfig.mirror || 'official';
-    installPythonDeps({ mirror: savedMirror }).catch(e => log.warn("[Setup] Fast sync failed:", e));
+    try {
+      await installPythonDeps({ mirror: savedMirror });
+    } catch (e) {
+      log.warn("[Setup] Fast sync failed:", e);
+    }
   }
 }
 
@@ -389,6 +411,7 @@ function startBackend() {
     cwd: BACKEND_DIR,
     env: {
       ...process.env,
+      API_PORT: String(API_PORT),
       PYTHONPATH: path.join(BACKEND_DIR, 'datation') + (process.platform === 'win32' ? ';' : ':') + BACKEND_DIR,
       VIRTUAL_ENV: VENV_DIR,
       PATH: path.dirname(pythonBin) + (process.platform === 'win32' ? ';' : ':') + (process.env.PATH || ''),
@@ -544,6 +567,11 @@ app.whenReady().then(async () => {
 
   try {
     await ensurePythonEnv();
+    
+    // Find a free port in case the default is occupied (e.g., by a local dev server)
+    API_PORT = await findFreePort(API_PORT);
+    API_URL = `http://127.0.0.1:${API_PORT}`;
+    
     startBackend();
     await waitForBackend();
     createMainWindow();
