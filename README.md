@@ -18,6 +18,14 @@ Datation provides a highly responsive, feature-rich Web workspace with seamless 
 
 > 📸 **Visual Walkthrough**: Check out our complete [UI & Features Screenshots Gallery](docs/screenshots.md) to explore the workspace visually!
 
+> 🎬 **Demo Video**: Click the image below to watch the full demo on Douyin (抖音)!
+
+<p align="center">
+  <a href="https://www.douyin.com/user/self?from_tab_name=main&modal_id=7653890582657453350">
+    <img src="docs/screenshots/datation-img16.png" alt="Datation Demo Video" width="600" />
+  </a>
+</p>
+
 ---
 
 ### 🚀 Key Features
@@ -49,6 +57,7 @@ Datation provides a highly responsive, feature-rich Web workspace with seamless 
 * **Model Context Protocol (MCP)**: Native support for external MCP servers to easily expand the system's capabilities.
 * **Zero-Config Setup**: Automatically bootstraps a SQLite e-commerce database (`~/.datation/demo_data.db`) pre-loaded with comprehensive synthetic sales history (20 customers, 12 categories, 24 products, 200 orders, ~381 items) on first startup, mapped instantly to an auto-generated MCP SQLite server via `uvx`.
 * **Agent Skills**: Dynamically load domain-specific expert guidelines (`SKILL.md`) in Markdown.
+* **Interactive Data Dashboards**: One-click generation of standalone, interactive HTML data dashboards (powered by ECharts & TailwindCSS) with multi-tab navigation, dropdown filters, and responsive dark-themed layouts — directly from your analysis results.
 * **Universal LLM Integration**: Multi-provider support via LiteLLM (DeepSeek, OpenAI, OpenRouter).
 
 #### 🖥️ 6. Premium User Experience (UX)

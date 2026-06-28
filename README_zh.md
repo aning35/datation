@@ -18,6 +18,14 @@
 
 > 📸 **视觉展示**: 欢迎访问完整的 [功能与界面截图画廊](docs/screenshots_zh.md) 直观浏览工作区各项功能！
 
+> 🎬 **演示视频**: 点击下方图片，在抖音观看完整的功能演示视频！
+
+<p align="center">
+  <a href="https://www.douyin.com/user/self?from_tab_name=main&modal_id=7653890582657453350">
+    <img src="docs/screenshots/datation-img16.png" alt="Datation 演示视频" width="600" />
+  </a>
+</p>
+
 ---
 
 ### 🚀 核心特性
@@ -50,6 +58,7 @@
 - **MCP (Model Context Protocol)**: 原生支持加载外部 MCP Servers，无缝挂载自定义工具库或数据库，无限扩展智能体能力边界。
 - **零配置开箱即用**: 首次启动时，Datation 会在用户主目录下自动生成一个 SQLite 演练数据库 (`~/.datation/demo_data.db`)，其中预装了仿真电商订单数据（包含 20 个核心客户、12 个商品分类、24 款热销单品、200+ 笔电商订单和 ~381 条明细）。系统将自动配置并使用 `uvx` 自动拉起 MCP SQLite 挂载此数据库。
 - **Agent Skills**: 支持通过 Markdown 定义并动态加载领域专家 SOP 技能库 (`SKILL.md`)。
+- **交互式数据看板**: 一键生成独立的交互式 HTML 数据看板页面（基于 ECharts 和 TailwindCSS），支持多标签页导航、下拉筛选过滤、暗色主题响应式布局，直接从分析结果生成可视化大屏。
 - **LLM 多平台支持**: 通过 LiteLLM 支持 DeepSeek、OpenAI、OpenRouter 等任意提供 OpenAI 兼容 API 的模型。
 
 #### 🖥️ 6. 极致的前端交互体验 (Premium UX)

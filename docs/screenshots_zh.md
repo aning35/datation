@@ -4,7 +4,7 @@
   <a href="screenshots.md">English</a> | <a href="screenshots_zh.md">简体中文</a>
 </p>
 
-欢迎来到 Datation 视觉画廊。以下是经过精确解析的 15 张系统实机截图，为您生动展现 Datation 多智能体分析控制台的各项核心功能。
+欢迎来到 Datation 视觉画廊。以下是经过精确解析的 16 张系统实机截图，为您生动展现 Datation 多智能体分析控制台的各项核心功能。
 
 ---
 
@@ -95,3 +95,9 @@ Token 消耗多维度统计面板。顶部醒目统计出输入/输出/总计 To
 ### 15. 会话文件与技能快捷提及菜单 (`@` 键补全)
 在会话聊天输入框输入 `@` 时触发的自动联想提示。支持在输入问题时快速提及之前上传过的表格文件，或是直接引用已安装的专家 SOP 技能包（如交互设计、合同审查等）。
 ![15_RollbackRestart](screenshots/datation-img15.png)
+
+---
+
+### 16. 交互式数据看板 (HTML)
+由 `dashboard-design` 智能体技能自动生成的独立 HTML 数据看板页面。采用暗色主题风格，内置 ECharts 可视化图表，包含月度 GMV 趋势图、品类 GMV 环形占比图、客户分层贡献面板、实时预警模块等，支持完整的标签页切换、下拉筛选过滤与响应式布局。
+![16_Dashboard](screenshots/datation-img16.png)
