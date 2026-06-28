@@ -48,6 +48,45 @@ def _json_schema_to_pydantic(schema: dict, model_name: str):
 
     return create_model(model_name, **fields)
 
+def _get_shell_path() -> str:
+    """Retrieve the actual PATH from the user's login shell (useful for macOS DMG)."""
+    import sys
+    import subprocess
+    import os
+    
+    current_path = os.environ.get("PATH", "")
+    
+    # Windows GUI apps inherit the system/user PATH directly from the registry,
+    # so we don't need (and can't use) the shell extraction method.
+    if sys.platform == "win32":
+        return current_path
+        
+    try:
+        # For macOS and Linux, GUI apps often lack user-level shell profiles.
+        shell = os.environ.get("SHELL", "/bin/bash" if sys.platform == "linux" else "/bin/zsh")
+        result = subprocess.run(
+            [shell, "-lic", "printenv PATH"], 
+            capture_output=True, 
+            text=True, 
+            timeout=2
+        )
+        if result.returncode == 0:
+            lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+            if lines:
+                return lines[-1]
+    except Exception:
+        pass
+        
+    # Fallback if shell extraction fails
+    if sys.platform == "darwin":
+        additions = "/opt/homebrew/bin:/usr/local/bin"
+        if "/opt/homebrew/bin" not in current_path:
+            return f"{additions}:{current_path}"
+            
+    return current_path
+
+_SHELL_PATH = _get_shell_path()
+
 class MCPManager:
     def __init__(self, config_path: str = "~/.datation/mcp_servers.json"):
         self.config_path = os.path.expanduser(config_path)
@@ -75,6 +114,8 @@ class MCPManager:
                 
                 # Merge existing env vars to carry over auth/tokens
                 server_env = os.environ.copy()
+                if _SHELL_PATH:
+                    server_env["PATH"] = _SHELL_PATH
                 server_env.update(envConfig)
                 
                 server_parameters = StdioServerParameters(

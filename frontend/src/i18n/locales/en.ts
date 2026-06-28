@@ -99,7 +99,8 @@ export const en = {
     scrollToBottom: 'Back to latest content',
     openHtmlReport: 'Open Interactive Report',
     htmlReportDesc: 'Open the full HTML report in a new tab',
-    htmlReportReady: 'HTML Report Ready'
+    htmlReportReady: 'HTML Report Ready',
+    generateDashboard: 'Generate Interactive Dashboard'
   },
   plan: {
     title: 'Mission Plan',

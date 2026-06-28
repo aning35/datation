@@ -1,6 +1,6 @@
 ---
 name: dashboard-design
-description: "提供标准化、专业的数据看板与经营驾驶舱设计SOP体系。适用于经营分析看板、业务监控看板、销售看板、用户增长看板、风险预警看板、数据质量看板、预测看板、项目管理看板、AI数据问答结果看板等场景。覆盖看板目标定义、用户角色识别、指标体系设计、页面信息架构、图表选择、交互设计、预警机制、权限设计、数据口径、数据质量、上线验收与迭代优化。强调业务决策导向、指标口径一致、信息层级清晰、可解释、可行动、可复盘，避免图表堆砌、指标混乱和视觉炫技。"
+description: "提供标准化、专业的数据看板与经营驾驶舱设计SOP体系，并支持将分析结果直接生成为可交互的纯静态HTML数据看板页面。适用于经营分析看板、业务监控看板、销售看板、用户增长看板、风险预警看板、数据质量看板、预测看板、项目管理看板、AI数据问答结果看板等场景。覆盖看板目标定义、用户角色识别、指标体系设计、页面信息架构、图表选择、交互设计、预警机制、权限设计、数据口径、数据质量、上线验收与迭代优化。同时支持将设计方案落地为基于ECharts与TailwindCSS的单文件HTML交互式看板，适用于'生成数据看板'、'把报表转成大屏'、'生成交互式数据看板HTML页面'等需求。强调业务决策导向、指标口径一致、信息层级清晰、可解释、可行动、可复盘，避免图表堆砌、指标混乱和视觉炫技。"
 ---
 
 # 数据看板设计标准作业程序  
@@ -2131,3 +2131,164 @@ PC 适合分析和下钻。
 - 能行动；
 - 能复盘；
 - 能真正支持业务决策。
+
+---
+
+## 24. 附加能力：HTML 交互式数据看板生成
+
+当用户的请求包含“生成数据看板”、“转成HTML大屏”、“生成前端页面”等明确的代码生成意图时，除了输出上述设计方案外，你**必须**输出一份可直接运行的静态 HTML 代码。
+
+### 24.1 落地技术栈约束
+
+1. **纯前端单文件**：必须将所有 HTML、CSS、JS 写在同一个 `index.html`（或 Markdown 的 `html` 代码块）中，方便用户复制和在浏览器中直接双击运行。
+2. **UI 样式库**：必须通过 CDN 引入 `TailwindCSS`：`<script src="https://cdn.tailwindcss.com"></script>`。
+3. **图表库**：必须通过 CDN 引入 `ECharts`：`<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>`。
+4. **图标库（可选）**：可以使用 FontAwesome 或 Lucide 引入 SVG。
+
+### 24.2 视觉与设计美学规范
+
+为了呈现“高级感”和“大屏感”，代码必须遵循以下美学：
+
+- **色彩克制与高级感**：不要使用原色（纯红 #FF0000、纯蓝 #0000FF）。背景优先使用深色暗黑风格（如 `bg-slate-900`）或高级明亮风格（如浅灰背景+纯白卡片）。
+- **空间与层次**：充分利用 Tailwind 的阴影 (`shadow-lg`, `shadow-xl`) 和圆角 (`rounded-xl`, `rounded-2xl`)，为卡片和图表容器划分清晰的边界。
+- **微交互与质感**：可适当运用玻璃拟态（`backdrop-blur`, `bg-white/10`）、渐变文字或渐变背景（`bg-gradient-to-r`）。
+- **响应式布局**：至少通过 Tailwind 的 `grid` 或 `flex` 搭建适合宽屏展示的栅格系统。
+
+### 24.3 交互逻辑实现（核心要求）
+
+**所有交互元素必须编写完整的 JavaScript 逻辑，不可只放 HTML 空壳。** 以下是必须实现的交互清单：
+
+#### 24.3.1 Tab / 标签页切换
+
+如果看板包含多个维度（如"总览"、"渠道分析"、"区域分析"），必须实现完整的 Tab 切换机制：
+
+1. **HTML 结构**：每个 Tab 按钮使用 `data-tab="tabId"` 属性标识，每个内容面板使用对应的 `id="tabId"` 并默认 `display: none`（仅第一个默认 `display: block`）。
+2. **切换逻辑**：点击 Tab 按钮时，隐藏所有面板，显示目标面板，并更新按钮的选中样式（如高亮底边、文字变色）。
+3. **图表 resize**：Tab 面板从隐藏变为可见后，**必须**对该面板内的所有 ECharts 实例调用 `chart.resize()`，否则图表宽高会塌陷为 0。
+
+参考实现模式：
+
+```javascript
+// Tab 切换核心逻辑
+function switchTab(tabId) {
+    // 1. 隐藏所有面板
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+    // 2. 移除所有按钮高亮
+    document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('border-blue-400', 'text-white');
+        b.classList.add('border-transparent', 'text-slate-400');
+    });
+    // 3. 显示目标面板
+    document.getElementById(tabId).style.display = 'block';
+    // 4. 高亮目标按钮
+    document.querySelector(`[data-tab="${tabId}"]`).classList.add('border-blue-400', 'text-white');
+    document.querySelector(`[data-tab="${tabId}"]`).classList.remove('border-transparent', 'text-slate-400');
+    // 5. resize 该面板内所有图表
+    const charts = tabChartMap[tabId] || [];
+    charts.forEach(c => c.resize());
+}
+```
+
+#### 24.3.2 筛选器 / 过滤条件
+
+如果看板包含下拉筛选（如时间范围、地区、渠道等），**必须实现筛选后数据联动更新**：
+
+1. **数据结构**：将所有原始数据存储在一个全局 JS 变量中（如 `const RAW_DATA = [...]`），方便后续筛选过滤。
+2. **筛选逻辑**：当用户修改 `<select>` 或点击筛选按钮时，从 `RAW_DATA` 中过滤出符合条件的子集。
+3. **图表更新**：用过滤后的数据重新构建 ECharts 的 `option`，调用 `chart.setOption(newOption)` 刷新图表。
+4. **指标卡片更新**：同步更新顶部的核心指标卡片数字（如总量、均值、增长率等）。
+
+参考实现模式：
+
+```javascript
+// 全局数据
+const RAW_DATA = {
+    sales: [
+        { month: '1月', region: '华东', channel: '线上', amount: 12000 },
+        { month: '1月', region: '华南', channel: '线下', amount: 8500 },
+        // ... 所有数据
+    ]
+};
+
+// 筛选并更新
+function applyFilters() {
+    const region = document.getElementById('filter-region').value;
+    const channel = document.getElementById('filter-channel').value;
+    
+    let filtered = RAW_DATA.sales;
+    if (region !== 'all') filtered = filtered.filter(d => d.region === region);
+    if (channel !== 'all') filtered = filtered.filter(d => d.channel === channel);
+    
+    // 更新指标卡片
+    const total = filtered.reduce((s, d) => s + d.amount, 0);
+    document.getElementById('metric-total').textContent = total.toLocaleString();
+    
+    // 更新图表
+    salesChart.setOption({
+        series: [{ data: aggregateByMonth(filtered) }]
+    });
+}
+
+// 绑定事件
+document.getElementById('filter-region').addEventListener('change', applyFilters);
+document.getElementById('filter-channel').addEventListener('change', applyFilters);
+```
+
+#### 24.3.3 图表渲染与配置
+
+1. **数据绑定**：仔细读取当前分析报告中的具体数据。将数据硬编码到 ECharts 的 `option` 中，切忌只输出空壳模板。
+2. **图表配置优化**：
+   - 隐藏 ECharts 默认背景，设置 `backgroundColor: 'transparent'`。
+   - 开启 tooltip（`tooltip: { trigger: 'axis' }`）。
+   - 调整 legend 样式以匹配深色或浅色主题（如 `legend: { textStyle: { color: '#94a3b8' } }`）。
+   - 使用平滑曲线（折线图 `smooth: true`），使用圆角柱状图（`itemStyle: { borderRadius: [4, 4, 0, 0] }`）。
+   - 坐标轴标签颜色匹配主题（`axisLabel: { color: '#94a3b8' }`）。
+3. **窗口自适应**：监听 `window.onresize`，对所有图表实例调用 `resize()`：
+
+```javascript
+window.addEventListener('resize', () => {
+    allCharts.forEach(c => c.resize());
+});
+```
+
+### 24.4 交互完整性自检清单
+
+生成代码后，必须逐项自检：
+
+- [ ] 所有 Tab 按钮点击后能正确切换内容面板
+- [ ] Tab 切换后图表能正常显示（无宽高塌陷）
+- [ ] 所有下拉筛选器修改后，图表和指标卡片的数据能联动更新
+- [ ] 筛选器的 "全部" 选项能恢复显示全量数据
+- [ ] 浏览器窗口缩放时图表自适应
+- [ ] 页面双击打开无任何 JS 报错（打开 console 检查）
+
+### 24.5 输出格式要求
+
+在回复中，使用如下格式输出代码：
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>数据看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 p-6 min-h-screen">
+    <!-- 1. 顶部标题与筛选栏（下拉框、日期选择等，绑定 change 事件） -->
+    <!-- 2. 核心指标卡片区 (Metric Cards，id 用于筛选后动态更新数字) -->
+    <!-- 3. Tab 切换控制器（带 data-tab 属性和 onclick 事件） -->
+    <!-- 4. Tab 内容面板（每个面板包含图表容器，设置明确宽高如 h-96） -->
+    <!-- 5. JS 脚本区：
+         - 全局数据变量 RAW_DATA
+         - ECharts 实例初始化
+         - Tab 切换函数 switchTab()
+         - 筛选过滤函数 applyFilters()
+         - window resize 监听
+    -->
+</body>
+</html>
+```
+
+注意：**一定**要包含真实的数据，**一定**要保证代码可以独立运行无报错，**一定**要让所有交互逻辑（Tab切换、筛选过滤、图表联动）完整可用！

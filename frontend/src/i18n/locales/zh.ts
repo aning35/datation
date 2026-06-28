@@ -99,7 +99,8 @@ export const zh = {
     scrollToBottom: '回到最新内容',
     openHtmlReport: '打开交互式报告',
     htmlReportDesc: '在新标签页中打开完整的 HTML 报告',
-    htmlReportReady: 'HTML 报告已就绪'
+    htmlReportReady: 'HTML 报告已就绪',
+    generateDashboard: '生成交互式数据看板'
   },
   plan: {
     title: '任务规划',

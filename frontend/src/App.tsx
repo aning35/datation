@@ -258,6 +258,10 @@ const App: React.FC = () => {
     }
   }, [graphSvg, loadGraph]);
 
+  const handleGenerateDashboard = useCallback(() => {
+    setQuery('@dashboard-design 请根据当前分析结果，生成一个基于 ECharts 的多标签页交互式数据看板 HTML。请提供完整的单一HTML文件。');
+  }, [setQuery]);
+
   // Load backend history data
   const fetchHistoryData = async (silent: boolean = false) => {
     if (!silent && historyList.length === 0) {
@@ -948,6 +952,7 @@ const App: React.FC = () => {
                       setReportViewMode={setReportViewMode}
                       chunksMeta={chunksMeta}
                       onRecallMessage={handleRecallMessage}
+                      onGenerateDashboard={handleGenerateDashboard}
                     />
                   </div>
                 </div>

@@ -24,6 +24,7 @@ interface TraceTabProps {
         historyLabels: { id: string; query: string }[];
         uploadedFiles: string[];
     }[];
+    onGenerateDashboard?: () => void;
 }
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:18321';
@@ -96,6 +97,7 @@ export const TraceTab: React.FC<TraceTabProps> = ({
     setReportViewMode,
     chunksMeta = [],
     onRecallMessage,
+    onGenerateDashboard,
 }) => {
     const { t } = useTranslation();
     const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -839,6 +841,18 @@ export const TraceTab: React.FC<TraceTabProps> = ({
                                                             </pre>
                                                         )}
                                                     </div>
+                                                    
+                                                    {chunk.node.includes('ReportGenerator') && onGenerateDashboard && (
+                                                        <div className="mt-3 flex items-center justify-end">
+                                                            <button
+                                                                onClick={onGenerateDashboard}
+                                                                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-lg shadow-sm hover:shadow transition-all text-sm font-medium"
+                                                            >
+                                                                <Sparkles className="w-4 h-4" />
+                                                                {t('trace.generateDashboard', '生成交互式数据看板')}
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
