@@ -22,7 +22,7 @@ Datation provides a highly responsive, feature-rich Web workspace with seamless 
 
 <p align="center">
   <a href="https://www.douyin.com/user/self?from_tab_name=main&modal_id=7653890582657453350">
-    <img src="docs/screenshots/datation-img16.png" alt="Datation Demo Video" width="600" />
+    <img src="docs/screenshots/datation-img1.png" alt="Datation Demo Video" width="600" />
   </a>
 </p>
 
